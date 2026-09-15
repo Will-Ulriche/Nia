@@ -1,0 +1,129 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../services/supabase';
+import { ModuleService } from '../services/module.service';
+import type { School, SchoolModule } from '../types/database';
+import type { ModuleName } from '../types/app';
+
+// ---------------------------------------------------------------------------
+// Types du contexte
+// ---------------------------------------------------------------------------
+
+interface SchoolContextValue {
+  /** L'établissement courant (null si pas encore chargé ou non connecté) */
+  school: School | null;
+  /** Liste des modules actifs pour cet établissement */
+  activeModules: SchoolModule[];
+  /** Noms des modules actifs (tableau simple pour comparaisons rapides) */
+  activeModuleNames: ModuleName[];
+  /** Vérifie si un module donné est actif */
+  hasModule: (name: ModuleName) => boolean;
+  /** En cours de chargement */
+  isLoading: boolean;
+  /** Erreur éventuelle */
+  error: string | null;
+  /** Recharger les données de l'établissement */
+  refresh: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Création du contexte
+// ---------------------------------------------------------------------------
+
+const SchoolContext = createContext<SchoolContextValue | null>(null);
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
+export function SchoolProvider({ children }: { children: React.ReactNode }) {
+  const [school, setSchool] = useState<School | null>(null);
+  const [activeModules, setActiveModules] = useState<SchoolModule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refresh = () => setRefreshKey((k) => k + 1);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // 1. Récupérer l'utilisateur connecté
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        // 2. Récupérer le profil pour trouver le school_id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('school_id')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile?.school_id || cancelled) return;
+
+        // 3. Récupérer les données de l'établissement
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .select('*')
+          .eq('id', profile.school_id)
+          .single();
+
+        if (schoolError) throw schoolError;
+        if (cancelled) return;
+
+        setSchool(schoolData as School);
+
+        // 4. Récupérer les modules actifs
+        const modules = await ModuleService.getActiveModules(profile.school_id);
+        if (!cancelled) {
+          setActiveModules(modules);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Erreur de chargement');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+
+    // Écouter les changements de session (connexion / déconnexion)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      if (!cancelled) load();
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [refreshKey]);
+
+  const activeModuleNames = activeModules.map((m) => m.module_name as ModuleName);
+  const hasModule = (name: ModuleName) => activeModuleNames.includes(name);
+
+  return (
+    <SchoolContext.Provider
+      value={{ school, activeModules, activeModuleNames, hasModule, isLoading, error, refresh }}
+    >
+      {children}
+    </SchoolContext.Provider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Hook interne pour lire le contexte (utilisé par useModules)
+// ---------------------------------------------------------------------------
+
+export function useSchoolContext(): SchoolContextValue {
+  const ctx = useContext(SchoolContext);
+  if (!ctx) {
+    throw new Error('useSchoolContext doit être utilisé dans un <SchoolProvider>');
+  }
+  return ctx;
+}
