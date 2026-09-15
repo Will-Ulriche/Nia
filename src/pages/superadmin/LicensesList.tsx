@@ -125,49 +125,49 @@ export function LicensesList() {
       {showForm && (
         <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', padding: '1.5rem', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.1rem', margin: '0 0 1rem', color: '#2c3e50' }}>Créer une licence</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr', gap: '1rem', alignItems: 'end', flexWrap: 'wrap' }}>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem', fontSize: '0.85rem', color: '#555' }}>Établissement</label>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 200px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Établissement</label>
               <select
                 value={form.schoolId}
                 onChange={(e) => setForm({ ...form, schoolId: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem', background: '#fafafa' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-2)', color: 'var(--text-primary)' }}
               >
                 {schools.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem', fontSize: '0.85rem', color: '#555' }}>Durée (mois)</label>
+            <div style={{ flex: '1 1 120px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Durée (mois)</label>
               <input
                 type="number" min={1} max={120}
                 value={form.months}
                 onChange={(e) => setForm({ ...form, months: Math.max(1, Number(e.target.value)) })}
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-1)', color: 'var(--text-primary)' }}
               />
             </div>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem', fontSize: '0.85rem', color: '#555' }}>Max appareils</label>
+            <div style={{ flex: '1 1 120px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Max appareils</label>
               <input
                 type="number" min={1} max={100}
                 value={form.maxDevices}
                 onChange={(e) => setForm({ ...form, maxDevices: Math.max(1, Number(e.target.value)) })}
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-1)', color: 'var(--text-primary)' }}
               />
             </div>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem', fontSize: '0.85rem', color: '#555' }}>Note (optionnel)</label>
+            <div style={{ flex: '2 1 200px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Note (optionnel)</label>
               <input
                 type="text"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder="ex : Renouvellement annuel 2026-2027"
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.9rem' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-1)', color: 'var(--text-primary)' }}
               />
             </div>
           </div>
-          {formError && <p style={{ color: '#e74c3c', fontSize: '0.85rem', marginTop: '0.75rem' }}>{formError}</p>}
+          {formError && <p style={{ color: 'var(--text-danger)', fontSize: '14px', marginTop: '12px' }}>{formError}</p>}
           <button
             onClick={handleCreate}
             disabled={creating}

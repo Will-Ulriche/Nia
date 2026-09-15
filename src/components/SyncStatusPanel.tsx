@@ -168,83 +168,83 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
           />
           <div style={{
             position: 'absolute',
-            top: 'calc(100% + 10px)',
+            top: 'calc(100% + 12px)',
             right: 0,
             zIndex: 100,
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-            width: '320px',
-            padding: '1.25rem',
-            border: '1px solid #eee',
+            background: 'var(--surface-1)',
+            borderRadius: 'var(--radius)',
+            boxShadow: 'var(--shadow)',
+            width: '340px',
+            padding: '20px',
+            border: '1px solid var(--border)',
           }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Synchronisation</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Synchronisation</h3>
               <button
                 onClick={handleSync}
                 disabled={!isOnline || stats.isSyncing}
                 style={{
-                  padding: '0.4rem 0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
                   border: 'none',
-                  borderRadius: '8px',
-                  background: isOnline && !stats.isSyncing ? '#3498db' : '#ccc',
-                  color: 'white',
+                  borderRadius: 'var(--radius)',
+                  background: isOnline && !stats.isSyncing ? 'var(--bg-accent)' : 'var(--surface-2)',
+                  color: isOnline && !stats.isSyncing ? 'var(--text-accent)' : 'var(--text-muted)',
                   fontWeight: 600,
                   cursor: isOnline && !stats.isSyncing ? 'pointer' : 'not-allowed',
-                  fontSize: '0.85rem',
+                  fontSize: '14px',
+                  transition: 'background 0.2s'
                 }}
               >
-                {stats.isSyncing ? '⏳ En cours…' : '🔄 Sync maintenant'}
+                {stats.isSyncing ? <span className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: 'var(--border)', borderTopColor: 'var(--text-accent)' }} /> : <i className="ti ti-refresh" style={{ fontSize: '16px' }} />}
+                {stats.isSyncing ? 'En cours…' : 'Sync. manuelle'}
               </button>
             </div>
 
             {/* Status rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <StatusRow
-                icon={isOnline ? '🌐' : '📵'}
                 label="Connexion"
                 value={isOnline ? 'En ligne' : 'Hors ligne'}
-                color={isOnline ? '#27ae60' : '#7f8c8d'}
+                color={isOnline ? 'var(--text-success)' : 'var(--text-muted)'}
               />
               <StatusRow
-                icon="🕐"
                 label="Dernière sync"
                 value={formatLastSync(stats.lastSyncAt)}
-                color="#2c3e50"
+                color="var(--text-primary)"
               />
               <StatusRow
-                icon="⏳"
-                label="Modifications en attente"
+                label="En attente"
                 value={stats.pendingCount > 0 ? `${stats.pendingCount} opération(s)` : 'Aucune'}
-                color={stats.pendingCount > 0 ? '#f39c12' : '#27ae60'}
+                color={stats.pendingCount > 0 ? 'var(--text-warning)' : 'var(--text-success)'}
               />
               {stats.deadCount > 0 && (
                 <StatusRow
-                  icon="❌"
                   label="Erreurs de sync"
-                  value={`${stats.deadCount} (max retries atteint)`}
-                  color="#e67e22"
+                  value={`${stats.deadCount} (échecs)`}
+                  color="var(--text-warning)"
                 />
               )}
               {stats.conflictCount > 0 && (
                 <StatusRow
-                  icon="⚠️"
-                  label="Conflits critiques"
+                  label="Conflits"
                   value={
-                    <a href="/direction/conflicts" onClick={() => setOpen(false)} style={{ color: '#c0392b', fontWeight: 700, textDecoration: 'none' }}>
+                    <a href="/direction/conflicts" onClick={() => setOpen(false)} style={{ color: 'var(--text-danger)', fontWeight: 600, textDecoration: 'none' }}>
                       {stats.conflictCount} à résoudre →
                     </a>
                   }
-                  color="#c0392b"
+                  color="var(--text-danger)"
                 />
               )}
             </div>
 
             {/* Info offline */}
             {!isOnline && (
-              <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#f8f9fa', borderRadius: '8px', fontSize: '0.8rem', color: '#666', lineHeight: 1.5 }}>
-                📱 <strong>Mode hors ligne actif.</strong> Vos modifications sont sauvegardées localement et seront synchronisées automatiquement à la reconnexion.
+              <div style={{ marginTop: '16px', padding: '12px', background: 'var(--surface-2)', borderRadius: 'var(--radius)', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, border: '1px solid var(--border)' }}>
+                <strong>Mode hors ligne.</strong> Vos modifications sont sauvegardées localement et seront synchronisées à la reconnexion.
               </div>
             )}
 
@@ -263,22 +263,20 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
 }
 
 function StatusRow({
-  icon,
   label,
   value,
   color,
 }: {
-  icon: string;
   label: string;
   value: React.ReactNode;
   color: string;
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0' }}>
-      <span style={{ color: '#666', fontSize: '0.85rem' }}>
-        {icon} {label}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '0.5px solid var(--border)' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 500 }}>
+        {label}
       </span>
-      <span style={{ color, fontWeight: 600, fontSize: '0.85rem', textAlign: 'right', maxWidth: '160px' }}>
+      <span style={{ color, fontWeight: 600, fontSize: '14px', textAlign: 'right', maxWidth: '160px' }}>
         {value}
       </span>
     </div>

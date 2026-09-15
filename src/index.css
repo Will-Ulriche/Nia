@@ -2,14 +2,46 @@
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
-  --border: #e5e4e7;
+  --border: #e2e8f0;
   --code-bg: #f4f3ec;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  /* Dashboard Variables */
+  --surface-1: #ffffff;
+  --surface-2: #f8fafc;
+  --fill-accent: #e0e7ff;
+  --on-accent: #4f46e5;
+  --text-accent: #4f46e5;
+  --bg-accent: #e0e7ff;
+  --bg-accent-muted: #f5f8ff;
+  --border-accent: #c7d2fe;
+  
+  --fill-pro: #fce7f3;
+  --on-pro: #db2777;
+  --text-pro: #db2777;
+  --bg-pro: #fce7f3;
+
+  --fill-success: #dcfce7;
+  --text-success: #16a34a;
+  --bg-success: #dcfce7;
+  --border-success: #bbf7d0;
+
+  --fill-warning: #fef9c3;
+  --text-warning: #ca8a04;
+  --bg-warning: #fef9c3;
+  --border-warning: #fef08a;
+
+  --bg-danger: #fee2e2;
+  --text-danger: #dc2626;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --radius: 8px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -51,11 +83,7 @@
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
   min-height: 100svh;
   display: flex;
   flex-direction: column;

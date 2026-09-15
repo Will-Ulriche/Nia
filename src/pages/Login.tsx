@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
+import loginIllustration from '../assets/login-illustration.jpg';
+import './Login.css';
 
 export function Login() {
   const navigate = useNavigate();
@@ -22,8 +24,6 @@ export function Login() {
 
       if (error) throw error;
       
-      // La redirection sera gérée par le useEffect dans App/ProtectedRoute 
-      // ou on peut forcer ici.
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion');
@@ -32,35 +32,70 @@ export function Login() {
     }
   };
 
+  const handleNonFunctional = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Non fonctionnel
+  };
+
   return (
-    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto' }}>
-      <h1>Connexion</h1>
-      <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {error && <div style={{ color: 'red' }}>{error}</div>}
-        <div>
-          <label>Email</label>
-          <input 
-            type="email" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            required 
-            style={{ width: '100%', padding: '0.5rem' }}
-          />
+    <div className="login-modal-overlay">
+      <div className="login-modal">
+        {/* Left Section - Form */}
+        <div className="login-form-section">
+          <div className="login-tabs">
+            <button className="tab active">Login</button>
+            <button className="tab" onClick={handleNonFunctional}>Sign up</button>
+          </div>
+
+          <form onSubmit={handleLogin} className="login-form">
+            {error && <div className="error-message">{error}</div>}
+            
+            <div className="input-group">
+              <span className="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+                placeholder="Email or phone number"
+              />
+            </div>
+            
+            <div className="input-group">
+              <span className="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+                placeholder="Password"
+              />
+            </div>
+            
+            <div className="login-actions">
+              <a href="#" className="forgot-password" onClick={handleNonFunctional}>Forgot your password?</a>
+              <button type="submit" disabled={loading} className="login-btn">
+                {loading ? <span className="spinner"></span> : 'Login'}
+              </button>
+            </div>
+          </form>
         </div>
-        <div>
-          <label>Mot de passe</label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-            style={{ width: '100%', padding: '0.5rem' }}
-          />
+
+        {/* Right Section - Illustration */}
+        <div className="login-illustration-section">
+           <img src={loginIllustration} alt="Workspace Illustration" className="login-illustration" />
         </div>
-        <button type="submit" disabled={loading} style={{ padding: '0.75rem' }}>
-          {loading ? 'Connexion...' : 'Se connecter'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
