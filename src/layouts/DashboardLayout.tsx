@@ -1,20 +1,29 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useRole } from '../hooks/useAuth';
 import { usePermission } from '../hooks/usePermission';
 import { SyncStatusPanel } from '../components/SyncStatusPanel';
 
 export function DashboardLayout() {
-  const { profile, signOut } = useAuth();
+  const { profile, originalProfile, signOut, stopImpersonating } = useAuth();
   const { isSuperAdmin, isDirection, isSecretary, isTeacher } = useRole();
   const permissions = usePermission();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const isImpersonating = !!originalProfile;
+
+  const handleStopImpersonating = () => {
+    stopImpersonating();
+    navigate('/admin/users');
+  };
 
   const getNavLinks = () => {
-    const links = [];
+    const links: { path: string; label: string; icon: string; color: string }[] = [];
 
     if (isSuperAdmin) {
       links.push({ path: '/admin', label: 'Dashboard global', icon: 'ti-layout-dashboard', color: 'var(--text-primary)' });
       links.push({ path: '/admin/schools', label: 'Établissements', icon: 'ti-building', color: 'var(--text-accent)' });
+      links.push({ path: '/admin/users', label: 'Utilisateurs', icon: 'ti-users-group', color: 'var(--text-accent)' });
       links.push({ path: '/admin/devices', label: 'Appareils', icon: 'ti-device-mobile', color: 'var(--text-success)' });
       links.push({ path: '/admin/licenses', label: 'Licences', icon: 'ti-key', color: 'var(--text-warning)' });
     }
@@ -35,7 +44,7 @@ export function DashboardLayout() {
       links.push({ path: '/direction/finance/payments', label: 'Paiements', icon: 'ti-cash', color: 'var(--text-pro)' });
       links.push({ path: '/direction/finance/caisse', label: 'Caisse & Dépenses', icon: 'ti-calculator', color: 'var(--text-pro)' });
       links.push({ path: '/direction/reports', label: 'Rapports & Stats', icon: 'ti-report-analytics', color: 'var(--text-primary)' });
-      links.push({ path: '/direction/audit', label: 'Journal d\'audit', icon: 'ti-history', color: 'var(--text-secondary)' });
+      links.push({ path: '/direction/audit', label: "Journal d'audit", icon: 'ti-history', color: 'var(--text-secondary)' });
       links.push({ path: '/direction/conflicts', label: 'Conflits', icon: 'ti-git-compare', color: 'var(--text-warning)' });
       links.push({ path: '/direction/backup', label: 'Sauvegarde', icon: 'ti-database', color: 'var(--text-success)' });
     }
@@ -56,88 +65,153 @@ export function DashboardLayout() {
   };
 
   const navLinks = getNavLinks();
-  
   const initials = ((profile?.first_name?.[0] || '') + (profile?.last_name?.[0] || '')).toUpperCase() || 'U';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0,1fr)', gap: 0, height: '100vh', overflow: 'hidden', background: 'var(--surface-2)' }}>
-      
-      {/* Sidebar */}
-      <div style={{ background: 'var(--surface-1)', borderRight: '0.5px solid var(--border)', padding: '28px 22px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '0 8px 22px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--fill-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-accent)', fontSize: '22px' }}>
-            <i className="ti ti-school" aria-hidden="true"></i>
-          </div>
-          <span style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)' }}>Kemitia</span>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', boxSizing: 'border-box', overflow: 'hidden' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: 'var(--radius)', background: 'var(--bg-pro)', marginBottom: '28px' }}>
-          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--fill-pro)', color: 'var(--on-pro)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 600, flexShrink: 0 }}>
-            {initials}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-pro)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {profile?.first_name} {profile?.last_name}
-            </p>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-pro)', textTransform: 'capitalize' }}>
-              {profile?.role?.replace('_', ' ')}
-            </p>
-          </div>
-        </div>
-
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '6px' }}>
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.path;
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius)',
-                  background: isActive ? 'var(--fill-accent)' : 'transparent',
-                  color: isActive ? 'var(--on-accent)' : 'var(--text-secondary)',
-                  fontSize: '16px',
-                  fontWeight: isActive ? 600 : 500,
-                  textDecoration: 'none'
-                }}
-              >
-                <i className={`ti ${link.icon}`} style={{ fontSize: '22px', color: isActive ? 'inherit' : link.color }} aria-hidden="true"></i>
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div style={{ marginTop: 'auto', paddingTop: '28px', borderTop: '0.5px solid var(--border)' }}>
-          <button 
-            onClick={() => signOut()}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 16px', width: '100%',
-              borderRadius: 'var(--radius)', background: 'var(--bg-danger)', color: 'var(--text-danger)', 
-              fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer', textAlign: 'left'
+      {/* Bandeau d'impersonation */}
+      {isImpersonating && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
+          padding: '10px 24px', background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+          color: 'white', fontSize: '14px', fontWeight: 600, flexShrink: 0,
+          boxShadow: '0 2px 12px rgba(124, 58, 237, 0.4)', zIndex: 100
+        }}>
+          <i className="ti ti-eye" style={{ fontSize: '18px' }} />
+          <span>
+            Vous naviguez en tant que{' '}
+            <strong>{profile?.first_name} {profile?.last_name}</strong>
+            {' '}({profile?.role?.replace('_', ' ')})
+          </span>
+          <button
+            onClick={handleStopImpersonating}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '6px 14px', borderRadius: '8px',
+              background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)',
+              color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+              transition: 'all 0.2s'
             }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.35)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.2)'; }}
           >
-            <i className="ti ti-logout" style={{ fontSize: '22px' }} aria-hidden="true"></i>
-            Déconnexion
+            <i className="ti ti-arrow-back-up" style={{ fontSize: '16px' }} />
+            Quitter le mode
           </button>
         </div>
-      </div>
-      
-      {/* Main content */}
-      <div style={{ overflowY: 'auto' }}>
-        <div style={{ padding: '28px 36px 36px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', paddingBottom: '22px', borderBottom: '0.5px solid var(--border)' }}>
+      )}
+
+      {/* Layout principal */}
+      <div style={{ display: 'flex', flex: 1, padding: '16px', boxSizing: 'border-box', overflow: 'hidden', background: '#f0f4ff', gap: '16px' }}>
+
+        {/* Sidebar */}
+        <div style={{ flex: '0 0 240px', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '20px', padding: '20px 16px', display: 'flex', flexDirection: 'column', boxShadow: '0 12px 24px rgba(59, 130, 246, 0.05)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px 20px', flexShrink: 0 }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
+              <i className="ti ti-school" aria-hidden="true"></i>
+            </div>
+            <span style={{ fontSize: '20px', fontWeight: 700, color: '#1e3a5f', letterSpacing: '-0.5px' }}>Kemitia</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', background: isImpersonating ? 'rgba(124, 58, 237, 0.08)' : 'rgba(59, 130, 246, 0.06)', marginBottom: '20px', border: isImpersonating ? '1px solid rgba(124, 58, 237, 0.2)' : '1px solid rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#fff', color: isImpersonating ? '#7c3aed' : '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600, flexShrink: 0, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)' }}>
+              {initials}
+            </div>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1e3a5f', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {profile?.first_name} {profile?.last_name}
+              </p>
+              <p style={{ margin: 0, fontSize: '11px', color: isImpersonating ? '#7c3aed' : '#64748b', textTransform: 'capitalize', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {isImpersonating && <i className="ti ti-eye" style={{ fontSize: '10px', marginRight: '4px' }} />}
+                {profile?.role?.replace('_', ' ')}
+              </p>
+            </div>
+          </div>
+
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'hidden', flex: 1, paddingRight: '4px' }}>
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: isActive ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'transparent',
+                    color: isActive ? '#ffffff' : '#64748b',
+                    fontSize: '14px', fontWeight: isActive ? 600 : 500, textDecoration: 'none',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isActive ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
+                    flexShrink: 1, minHeight: 0
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(59, 130, 246, 0.05)';
+                      (e.currentTarget as HTMLElement).style.color = '#3b82f6';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLElement).style.color = '#64748b';
+                    }
+                  }}
+                >
+                  <i className={`ti ${link.icon}`} style={{ fontSize: '18px', color: isActive ? '#ffffff' : link.color, flexShrink: 0 }} aria-hidden="true"></i>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div style={{ marginTop: 'auto', paddingTop: '16px', flexShrink: 0 }}>
+            {isImpersonating ? (
+              <button
+                onClick={handleStopImpersonating}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', width: '100%',
+                  borderRadius: '10px', background: '#f5f3ff', color: '#7c3aed',
+                  fontSize: '14px', fontWeight: 600, border: '1px solid #ede9fe', cursor: 'pointer', textAlign: 'left',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#ede9fe'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#f5f3ff'; }}
+              >
+                <i className="ti ti-arrow-back-up" style={{ fontSize: '18px', flexShrink: 0 }} aria-hidden="true"></i>
+                Quitter le mode
+              </button>
+            ) : (
+              <button
+                onClick={() => signOut()}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', width: '100%',
+                  borderRadius: '10px', background: '#fef2f2', color: '#dc2626',
+                  fontSize: '14px', fontWeight: 600, border: '1px solid #fee2e2', cursor: 'pointer', textAlign: 'left',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#fee2e2'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fef2f2'; }}
+              >
+                <i className="ti ti-logout" style={{ fontSize: '18px', flexShrink: 0 }} aria-hidden="true"></i>
+                Déconnexion
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div style={{ flex: 1, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(16px)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.5)', boxShadow: '0 12px 24px rgba(59, 130, 246, 0.05)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px', borderBottom: '1px solid rgba(226, 232, 240, 0.6)', flexShrink: 0 }}>
             <SyncStatusPanel schoolId={profile?.school_id ?? null} />
-            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '15px', fontWeight: 500, padding: '7px 15px', borderRadius: '99px', background: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '12px', fontWeight: 600, padding: '6px 12px', borderRadius: '99px', background: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)', color: '#fff', boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)' }}>
               {profile?.school_id ? 'Établissement lié' : 'Plateforme globale'}
             </span>
           </div>
-          
-          <Outlet />
+          <div style={{ padding: '20px', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

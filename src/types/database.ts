@@ -13,6 +13,7 @@ export interface School extends BaseSyncEntity {
   address: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  is_active: boolean | number;
 }
 
 export interface Profile extends BaseSyncEntity {

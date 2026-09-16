@@ -81,47 +81,48 @@ export function DirectionDashboard() {
   const firstName = profile?.first_name || 'Directeur';
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1200px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden', padding: '0', gap: '2vh' }}>
       {/* En-tête */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', color: '#2c3e50', margin: 0, fontWeight: 700 }}>
+      <div style={{ flexShrink: 0, background: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)', padding: 'max(16px, 2vh) max(20px, 2vw)', borderRadius: '16px', color: 'white', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', right: '-50px', top: '-50px', width: '200px', height: '200px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%', filter: 'blur(20px)' }}></div>
+        <h1 style={{ fontSize: 'clamp(20px, 2.5vh, 28px)', margin: 0, fontWeight: 800, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {greeting}, {firstName} 👋
         </h1>
-        <p style={{ color: '#7f8c8d', margin: '0.3rem 0 0', fontSize: '1rem' }}>
+        <p style={{ color: 'rgba(255, 255, 255, 0.8)', margin: '4px 0 0', fontSize: 'clamp(12px, 1.5vh, 14px)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {school ? (
             <>
-              Tableau de bord de <strong style={{ color: '#34495e' }}>{school.name}</strong>
-              {activeYear && <> — Année scolaire : <strong style={{ color: '#3498db' }}>{activeYear.name}</strong></>}
+              Tableau de bord de <strong style={{ color: 'white' }}>{school.name}</strong>
+              {activeYear && <> — Année scolaire : <strong style={{ color: '#bfdbfe' }}>{activeYear.name}</strong></>}
             </>
           ) : 'Bienvenue dans votre espace de direction.'}
         </p>
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 'clamp(8px, 1.5vw, 16px)', flex: '1 1 auto', minHeight: 0 }}>
         <StatCard
           label="Élèves inscrits"
           value={stats?.totalStudents ?? '—'}
           icon="🎓"
-          color="#3498db"
+          color="#3b82f6"
           to="/direction/students"
           loading={loadingStats}
           subtext="cette année scolaire"
         />
         <StatCard
           label="Encaissements"
-          value={stats ? `${stats.totalIncomes.toLocaleString('fr-FR')} FCFA` : '—'}
+          value={stats ? `${stats.totalIncomes.toLocaleString('fr-FR')} F` : '—'}
           icon="💰"
-          color="#27ae60"
+          color="#10b981"
           to="/direction/finance/payments"
           loading={loadingStats}
           subtext="paiements reçus"
         />
         <StatCard
           label="Solde caisse"
-          value={stats ? `${stats.cashBalance.toLocaleString('fr-FR')} FCFA` : '—'}
+          value={stats ? `${stats.cashBalance.toLocaleString('fr-FR')} F` : '—'}
           icon="🏦"
-          color={stats && stats.cashBalance < 0 ? '#e74c3c' : '#16a085'}
+          color={stats && stats.cashBalance < 0 ? '#ef4444' : '#10b981'}
           to="/direction/finance/caisse"
           loading={loadingStats}
           subtext="revenus — dépenses"
@@ -130,7 +131,7 @@ export function DirectionDashboard() {
           label="Évaluations"
           value={stats?.assessmentsThisYear ?? '—'}
           icon="📝"
-          color="#e67e22"
+          color="#f59e0b"
           to="/direction/assessments"
           loading={loadingStats}
           subtext="créées cette année"
@@ -139,35 +140,37 @@ export function DirectionDashboard() {
           label="Sync en attente"
           value={stats?.pendingSync ?? '—'}
           icon={stats?.pendingSync === 0 ? '✅' : '🔄'}
-          color={stats?.pendingSync === 0 ? '#27ae60' : '#e67e22'}
+          color={stats?.pendingSync === 0 ? '#10b981' : '#f59e0b'}
           loading={loadingStats}
           subtext={stats?.pendingSync === 0 ? 'données synchronisées' : 'mutations à envoyer'}
         />
       </div>
 
       {/* Raccourcis rapides */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.1rem', color: '#7f8c8d', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <h2 style={{ flexShrink: 0, fontSize: 'clamp(14px, 1.8vh, 16px)', color: '#1e3a5f', margin: '0 0 1vh', fontWeight: 700, letterSpacing: '-0.2px' }}>
           Accès rapides
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1rem' }}>
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 'clamp(8px, 1.5vw, 16px)', minHeight: 0 }}>
           {QUICK_LINKS.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: '0.5rem', padding: '1.2rem 1rem',
-                background: 'white', borderRadius: '12px', textDecoration: 'none',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                transition: 'transform 0.15s, box-shadow 0.15s',
-                color: '#34495e', fontSize: '0.9rem', fontWeight: 600,
+                gap: 'clamp(4px, 1vh, 8px)', padding: 'clamp(8px, 1vw, 16px)',
+                background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(12px)',
+                borderRadius: '16px', textDecoration: 'none', border: '1px solid rgba(226, 232, 240, 0.6)',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.05)',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                color: '#1e3a5f', fontSize: 'clamp(11px, 1.2vw, 14px)', fontWeight: 600,
+                textAlign: 'center', minHeight: 0
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.1)'; (e.currentTarget as HTMLElement).style.border = '1px solid rgba(59, 130, 246, 0.2)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.05)'; (e.currentTarget as HTMLElement).style.border = '1px solid rgba(226, 232, 240, 0.6)'; }}
             >
-              <span style={{ fontSize: '2rem' }}>{link.icon}</span>
-              <span>{link.label}</span>
+              <span style={{ fontSize: 'clamp(20px, 3vh, 28px)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>{link.icon}</span>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{link.label}</span>
             </Link>
           ))}
         </div>

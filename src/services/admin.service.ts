@@ -79,6 +79,31 @@ export const AdminService = {
     return data as School;
   },
 
+  /**
+   * Supprimer un établissement (Soft delete).
+   */
+  async deleteSchool(schoolId: string): Promise<void> {
+    const { error } = await supabase
+      .from('schools')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', schoolId);
+    if (error) throw error;
+  },
+
+  /**
+   * Activer ou désactiver un établissement.
+   */
+  async toggleSchoolStatus(schoolId: string, isActive: boolean): Promise<School> {
+    const { data, error } = await supabase
+      .from('schools')
+      .update({ is_active: isActive, updated_at: new Date().toISOString() })
+      .eq('id', schoolId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as School;
+  },
+
   // ---------------------------------------------------------------------------
   // Modules
   // ---------------------------------------------------------------------------
@@ -144,6 +169,20 @@ export const AdminService = {
     const { data, error } = await supabase
       .from('school_devices')
       .update({ is_revoked: true, updated_at: new Date().toISOString() })
+      .eq('id', deviceId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as SchoolDevice;
+  },
+
+  /**
+   * Réactiver un appareil révoqué.
+   */
+  async reactivateDevice(deviceId: string): Promise<SchoolDevice> {
+    const { data, error } = await supabase
+      .from('school_devices')
+      .update({ is_revoked: false, updated_at: new Date().toISOString() })
       .eq('id', deviceId)
       .select()
       .single();

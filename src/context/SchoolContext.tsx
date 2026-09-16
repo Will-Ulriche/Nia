@@ -61,7 +61,7 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
           .from('profiles')
           .select('school_id')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!profile?.school_id || cancelled) return;
 
@@ -70,7 +70,7 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
           .from('schools')
           .select('*')
           .eq('id', profile.school_id)
-          .single();
+          .maybeSingle();
 
         if (schoolError) throw schoolError;
         if (cancelled) return;

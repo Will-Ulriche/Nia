@@ -42,6 +42,19 @@ export const UserService = {
   },
 
   /**
+   * Lister tous les utilisateurs de la plateforme (Super Admin uniquement).
+   */
+  async listAllUsers(): Promise<Profile[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*, schools(name)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data as (Profile & { schools?: { name: string } | null })[];
+  },
+
+  /**
    * Lister les utilisateurs d'un établissement.
    */
   async listUsers(schoolId: string): Promise<Profile[]> {

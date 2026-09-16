@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
-import { DeviceService, type Device } from '../../services/device.service';
+import { AdminService } from '../../services/admin.service';
+import type { SchoolDevice } from '../../types/database';
 
 export function DevicesList() {
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [devices, setDevices] = useState<SchoolDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
 
   const loadDevices = async () => {
     setLoading(true);
     try {
-      // Super Admin can see all devices, or they can filter by school. 
-      // For now we load all devices (since the user is Super Admin)
-      const data = await DeviceService.getDevicesBySchool(null);
+      const data = await AdminService.listDevices();
       setDevices(data);
     } catch (err) {
       console.error(err);
@@ -23,13 +22,17 @@ export function DevicesList() {
 
   useEffect(() => { loadDevices(); }, []);
 
-  const handleToggleRevoke = async (device: Device) => {
+  const handleToggleRevoke = async (device: SchoolDevice) => {
     const action = device.is_revoked ? 'réactiver' : 'révoquer';
-    if (!confirm(`Voulez-vous vraiment ${action} cet appareil (${device.name}) ?`)) return;
+    if (!confirm(`Voulez-vous vraiment ${action} cet appareil (${device.device_name}) ?`)) return;
 
     setRevoking(device.id);
     try {
-      await DeviceService.setRevocationStatus(device.id, !device.is_revoked);
+      if (device.is_revoked) {
+        await AdminService.reactivateDevice(device.id);
+      } else {
+        await AdminService.revokeDevice(device.id);
+      }
       await loadDevices();
     } catch (err) {
       console.error(err);
@@ -65,8 +68,8 @@ export function DevicesList() {
             {devices.map(device => (
               <tr key={device.id} style={{ borderBottom: '1px solid #eee', opacity: device.is_revoked ? 0.6 : 1 }}>
                 <td style={{ padding: '1rem' }}>
-                  <div style={{ fontWeight: 600 }}>{device.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#666', fontFamily: 'monospace' }}>{device.id}</div>
+                  <div style={{ fontWeight: 600 }}>{device.device_name}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666', fontFamily: 'monospace' }}>{device.device_id || device.id}</div>
                 </td>
                 <td style={{ padding: '1rem' }}>
                   {device.is_revoked ? (
@@ -80,7 +83,7 @@ export function DevicesList() {
                   )}
                 </td>
                 <td style={{ padding: '1rem' }}>
-                  {new Date(device.last_active_at).toLocaleString('fr-FR')}
+                  {device.created_at ? new Date(device.created_at).toLocaleString('fr-FR') : 'Inconnu'}
                 </td>
                 <td style={{ padding: '1rem' }}>
                   {device.last_sync_at ? new Date(device.last_sync_at).toLocaleString('fr-FR') : 'Jamais'}

@@ -19,6 +19,8 @@ import { SecretaireDashboard } from './pages/dashboards/SecretaireDashboard';
 import { ProfesseurDashboard } from './pages/dashboards/ProfesseurDashboard';
 import { DevicesList } from './pages/superadmin/DevicesList';
 import { LicensesList } from './pages/superadmin/LicensesList';
+import { SchoolsList } from './pages/superadmin/SchoolsList';
+import { UsersList } from './pages/superadmin/UsersList';
 
 import { AcademicYearsList } from './pages/direction/academic-years/AcademicYearsList';
 import { AcademicYearDetails } from './pages/direction/academic-years/AcademicYearDetails';
@@ -132,8 +134,10 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
                 <Route element={<DashboardLayout />}>
                   <Route path="/admin" element={<SuperAdminDashboard />} />
+                  <Route path="/admin/schools" element={<SchoolsList />} />
                   <Route path="/admin/devices" element={<DevicesList />} />
                   <Route path="/admin/licenses" element={<LicensesList />} />
+                  <Route path="/admin/users" element={<UsersList />} />
                 </Route>
               </Route>
 

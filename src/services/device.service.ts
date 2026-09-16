@@ -49,14 +49,16 @@ export class DeviceService {
   static async registerDevice(schoolId: string | null, name: string): Promise<void> {
     const deviceId = await this.getDeviceId();
     
+    if (!schoolId) return; // Un appareil doit être lié à un établissement.
+
     const { error } = await supabase
-      .from('devices')
+      .from('school_devices')
       .upsert({
         id: deviceId,
         school_id: schoolId,
-        name,
+        device_name: name,
         app_version: '1.0.0', // TODO: Get from env or package.json
-        last_active_at: new Date().toISOString(),
+        last_sync_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
     if (error) {
@@ -71,8 +73,8 @@ export class DeviceService {
   static async heartbeat(): Promise<void> {
     const deviceId = await this.getDeviceId();
     const { error } = await supabase
-      .from('devices')
-      .update({ last_active_at: new Date().toISOString() })
+      .from('school_devices')
+      .update({ updated_at: new Date().toISOString() })
       .eq('id', deviceId);
       
     if (error) {
@@ -86,7 +88,7 @@ export class DeviceService {
   static async updateLastSync(): Promise<void> {
     const deviceId = await this.getDeviceId();
     const { error } = await supabase
-      .from('devices')
+      .from('school_devices')
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', deviceId);
       
@@ -106,7 +108,7 @@ export class DeviceService {
 
     const deviceId = await this.getDeviceId();
     const { data, error } = await supabase
-      .from('devices')
+      .from('school_devices')
       .select('is_revoked')
       .eq('id', deviceId)
       .single();
@@ -123,9 +125,10 @@ export class DeviceService {
   }
   
   // --- Admin Methods ---
+  // Note: These methods are mostly replaced by AdminService, kept for compatibility if needed.
 
   static async getDevicesBySchool(schoolId: string | null): Promise<Device[]> {
-    let query = supabase.from('devices').select('*').order('last_active_at', { ascending: false });
+    let query = supabase.from('school_devices').select('*').order('created_at', { ascending: false });
     if (schoolId) {
         query = query.eq('school_id', schoolId);
     }
@@ -136,7 +139,7 @@ export class DeviceService {
 
   static async setRevocationStatus(deviceId: string, isRevoked: boolean): Promise<void> {
     const { error } = await supabase
-      .from('devices')
+      .from('school_devices')
       .update({ is_revoked: isRevoked })
       .eq('id', deviceId);
     if (error) throw error;

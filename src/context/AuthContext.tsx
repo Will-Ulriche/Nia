@@ -9,8 +9,11 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  originalProfile: Profile | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
+  impersonateUser: (targetProfile: Profile) => void;
+  stopImpersonating: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -19,7 +22,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [originalProfile, setOriginalProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const impersonateUser = (targetProfile: Profile) => {
+    if (!originalProfile && profile) {
+      setOriginalProfile(profile);
+    }
+    setProfile(targetProfile);
+  };
+
+  const stopImpersonating = () => {
+    if (originalProfile) {
+      setProfile(originalProfile);
+      setOriginalProfile(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, isLoading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, originalProfile, isLoading, signOut, impersonateUser, stopImpersonating }}>
       {children}
     </AuthContext.Provider>
   );
