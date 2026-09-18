@@ -3,17 +3,30 @@ import schemaSql from './schema.sql?raw';
 
 let dbInstance: any = null;
 
-// Web Browser LocalStorage / In-Memory SQL Mock for dev & web mode
+/**
+ * WebSqlMock : FAUSSE BASE DE DONNÉES POUR LE DÉVELOPPEMENT WEB
+ * ⚠️ ATTENTION ⚠️
+ * L'application est 100% Desktop (Tauri). Ce mock n'est présent QUE pour
+ * permettre de travailler sur l'UI dans le navigateur avec `npm run dev`.
+ * Il ne supporte qu'un sous-ensemble très basique du SQL et ne doit JAMAIS
+ * être utilisé comme référence pour le fonctionnement réel de l'app.
+ */
 class WebSqlMock {
   private store: Map<string, any[]> = new Map();
 
   constructor() {
+    console.warn(
+      '%c[WebSqlMock] MODE DÉVELOPPEMENT WEB ACTIF\n' +
+      'L\'application utilise une fausse base de données (LocalStorage).\n' +
+      'Les requêtes SQL complexes ne fonctionneront pas. Utilisez l\'application Tauri pour tester la logique métier.',
+      'color: orange; font-weight: bold; font-size: 14px;'
+    );
     this.initFromLocalStorage();
   }
 
   private initFromLocalStorage() {
     try {
-      const raw = localStorage.getItem('kemitia_local_db');
+      const raw = localStorage.getItem('kamitia_local_db');
       if (raw) {
         const parsed = JSON.parse(raw);
         for (const [key, val] of Object.entries(parsed)) {
@@ -31,7 +44,7 @@ class WebSqlMock {
       this.store.forEach((val, key) => {
         obj[key] = val;
       });
-      localStorage.setItem('kemitia_local_db', JSON.stringify(obj));
+      localStorage.setItem('kamitia_local_db', JSON.stringify(obj));
     } catch (e) {
       console.warn('[WebSqlMock] Error saving to localStorage:', e);
     }
@@ -135,7 +148,10 @@ class WebSqlMock {
 
         if (q.includes('WHERE')) {
           let filtered = rows;
-          if (q.includes("status = 'error'") || q.includes("status = 'pending'")) {
+          if (q.includes("status = 'error'") && q.includes("retry_count >=")) {
+            // Delete only dead mutations for UI dev
+            filtered = rows.filter(r => !(r.status === 'error' && (r.retry_count || 0) >= 3));
+          } else if (q.includes("status = 'error'") || q.includes("status = 'pending'")) {
             filtered = rows.filter(r => r.status !== 'error' && r.status !== 'pending');
           } else if (q.includes('id =') && bindParams.length > 0) {
             const idVal = bindParams[0];
@@ -210,7 +226,7 @@ class WebSqlMock {
 export async function getDb(): Promise<any> {
   if (!dbInstance) {
     try {
-      dbInstance = await Database.load('sqlite:kemitia.db');
+      dbInstance = await Database.load('sqlite:kamitia.db');
       await initDb(dbInstance);
     } catch (e) {
       console.warn('[Local DB] Tauri SQL plugin not available. Switching to Web LocalStorage DB fallback.', e);
@@ -219,6 +235,20 @@ export async function getDb(): Promise<any> {
     }
   }
   return dbInstance;
+}
+
+export async function closeDb(): Promise<void> {
+  if (dbInstance) {
+    try {
+      if (typeof dbInstance.close === 'function') {
+        await dbInstance.close();
+      }
+    } catch (e) {
+      console.warn('[Local DB] Error closing DB:', e);
+    } finally {
+      dbInstance = null;
+    }
+  }
 }
 
 async function initDb(db: any) {
@@ -230,11 +260,11 @@ async function initDb(db: any) {
     if (!ENABLE_REMOTE_SYNC) {
       await db.execute(`DELETE FROM mutations_queue`);
       try {
-        const raw = localStorage.getItem('kemitia_local_db');
+        const raw = localStorage.getItem('kamitia_local_db');
         if (raw) {
           const parsed = JSON.parse(raw);
           parsed.mutations_queue = [];
-          localStorage.setItem('kemitia_local_db', JSON.stringify(parsed));
+          localStorage.setItem('kamitia_local_db', JSON.stringify(parsed));
         }
       } catch (e) {}
     }

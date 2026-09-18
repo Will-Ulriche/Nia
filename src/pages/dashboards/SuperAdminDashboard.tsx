@@ -57,7 +57,7 @@ export function SuperAdminDashboard() {
       <div style={{ flexShrink: 0, background: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)', padding: 'max(16px, 2vh) max(20px, 2vw)', borderRadius: '16px', color: 'white', boxShadow: '0 8px 24px rgba(59, 130, 246, 0.15)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: '-50px', top: '-50px', width: '200px', height: '200px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%', filter: 'blur(20px)' }}></div>
         <h2 style={{ fontSize: 'clamp(20px, 2.5vh, 28px)', margin: 0, fontWeight: 800, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{greeting}, Super Admin</h2>
-        <p style={{ margin: '4px 0 0', fontSize: 'clamp(12px, 1.5vh, 14px)', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Vue d'ensemble de la plateforme Kemitia</p>
+        <p style={{ margin: '4px 0 0', fontSize: 'clamp(12px, 1.5vh, 14px)', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Vue d'ensemble de la plateforme Kamitia</p>
       </div>
 
       {error && (

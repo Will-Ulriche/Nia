@@ -62,24 +62,26 @@ const BOOLEAN_COLUMNS: Record<string, string[]> = {
 const MAX_RETRIES = 3;
 
 let pullInterval: ReturnType<typeof setInterval> | null = null;
+let onlineListener: (() => void) | null = null;
 
 // ================================================================
 // Helpers
 // ================================================================
 
-async function getLastSyncAt(): Promise<string | null> {
+async function getLastSyncAt(schoolId: string): Promise<string | null> {
   const db = await getDb();
   const rows = await db.select<{ value: string }[]>(
-    `SELECT value FROM sync_metadata WHERE key = 'last_sync_at'`
+    `SELECT value FROM sync_metadata WHERE key = $1`,
+    [`last_sync_at_${schoolId}`]
   );
   return rows.length ? rows[0].value : null;
 }
 
-async function setLastSyncAt(timestamp: string) {
+async function setLastSyncAt(schoolId: string, timestamp: string) {
   const db = await getDb();
   await db.execute(
-    `INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ('last_sync_at', $1)`,
-    [timestamp]
+    `INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ($1, $2)`,
+    [`last_sync_at_${schoolId}`, timestamp]
   );
 }
 
@@ -102,7 +104,7 @@ export class SyncService {
     }
 
     const db = await getDb();
-    const lastSyncAt = await getLastSyncAt();
+    const lastSyncAt = await getLastSyncAt(schoolId);
     const syncStartedAt = new Date().toISOString();
 
     console.log(`[Sync] Pull started. Mode: ${lastSyncAt ? `incremental since ${lastSyncAt}` : 'full'}`);
@@ -145,7 +147,7 @@ export class SyncService {
     }
 
     // Enregistrer le timestamp du début de ce sync (pas la fin, pour éviter de manquer des rows)
-    await setLastSyncAt(syncStartedAt);
+    await setLastSyncAt(schoolId, syncStartedAt);
     await DeviceService.updateLastSync();
     console.log('[Sync] Pull complete. last_sync_at set to', syncStartedAt);
   }
@@ -299,19 +301,10 @@ export class SyncService {
    */
   static async clearDeadMutations(): Promise<void> {
     const db = await getDb();
-    await db.execute(`DELETE FROM mutations_queue`);
-    
-    // Purge mutations_queue directly from localStorage if present
-    try {
-      const raw = localStorage.getItem('kemitia_local_db');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        parsed.mutations_queue = [];
-        localStorage.setItem('kemitia_local_db', JSON.stringify(parsed));
-      }
-    } catch (e) {
-      console.warn('Failed to clear mutations_queue from localStorage', e);
-    }
+    await db.execute(
+      `DELETE FROM mutations_queue WHERE status = 'error' AND retry_count >= $1`,
+      [MAX_RETRIES]
+    );
   }
 
   /**
@@ -333,7 +326,8 @@ export class SyncService {
     doPull();
 
     // Pull on network restore
-    window.addEventListener('online', doPull);
+    onlineListener = doPull;
+    window.addEventListener('online', onlineListener);
 
     // Periodic pull every 5 minutes
     pullInterval = setInterval(doPull, 5 * 60 * 1000);
@@ -345,6 +339,10 @@ export class SyncService {
     if (pullInterval) {
       clearInterval(pullInterval);
       pullInterval = null;
+    }
+    if (onlineListener) {
+      window.removeEventListener('online', onlineListener);
+      onlineListener = null;
     }
   }
 }

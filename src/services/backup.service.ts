@@ -2,9 +2,10 @@ import { appDataDir, join } from '@tauri-apps/api/path';
 import { copyFile, exists, mkdir } from '@tauri-apps/plugin-fs';
 import { save, open, message } from '@tauri-apps/plugin-dialog';
 import { SyncService } from './sync.service';
+import { closeDb } from './local/db';
 
 export class BackupService {
-  private static readonly DB_FILENAME = 'kemitia.db';
+  private static readonly DB_FILENAME = 'kamitia.db';
 
   /**
    * Retourne le chemin absolu vers le fichier de base de données SQLite local.
@@ -26,14 +27,16 @@ export class BackupService {
         return false;
       }
 
-      const defaultName = `kemitia_backup_${new Date().toISOString().split('T')[0]}.db`;
+      const defaultName = `kamitia_backup_${new Date().toISOString().split('T')[0]}.db`;
       const savePath = await save({
-        filters: [{ name: 'Base de données Kemitia', extensions: ['db', 'sqlite'] }],
+        filters: [{ name: 'Base de données Kamitia', extensions: ['db', 'sqlite'] }],
         defaultPath: defaultName,
         title: 'Sauvegarder la base de données'
       });
 
       if (savePath) {
+        // Close DB before copying to ensure integrity
+        await closeDb();
         await copyFile(dbPath, savePath);
         await message('La sauvegarde a été effectuée avec succès !', { title: 'Succès', kind: 'info' });
         return true;
@@ -62,9 +65,11 @@ export class BackupService {
         await mkdir(backupDir, { recursive: true });
       }
 
-      const filename = `kemitia_autobackup_${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
+      const filename = `kamitia_autobackup_${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
       const targetPath = await join(backupDir, filename);
 
+      // Close DB before copying to ensure integrity (especially on app close)
+      await closeDb();
       await copyFile(dbPath, targetPath);
       console.log('[BackupService] Auto-backup created at', targetPath);
     } catch (error) {
@@ -79,13 +84,15 @@ export class BackupService {
     try {
       const selected = await open({
         multiple: false,
-        filters: [{ name: 'Base de données Kemitia', extensions: ['db', 'sqlite'] }],
+        filters: [{ name: 'Base de données Kamitia', extensions: ['db', 'sqlite'] }],
         title: 'Choisir le fichier de sauvegarde'
       });
 
       if (selected && typeof selected === 'string') {
         const dbPath = await this.getDbPath();
         
+        // Close DB before overwriting
+        await closeDb();
         // Copie du fichier sélectionné par-dessus la DB existante
         await copyFile(selected, dbPath);
         

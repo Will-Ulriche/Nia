@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Kemitia",
+  "productName": "Kamitia",
   "version": "1.0.0",
-  "identifier": "com.kemitia.app",
+  "identifier": "com.kamitia.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Kemitia",
+        "title": "Kamitia",
         "width": 800,
         "height": 600,
         "resizable": true,
