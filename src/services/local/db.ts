@@ -223,7 +223,13 @@ class WebSqlMock {
   }
 }
 
-export async function getDb(): Promise<any> {
+export interface LocalDatabase {
+  execute(query: string, bindValues?: any[]): Promise<any>;
+  select<T>(query: string, bindValues?: any[]): Promise<T>;
+  close?: () => Promise<void>;
+}
+
+export async function getDb(): Promise<LocalDatabase> {
   if (!dbInstance) {
     try {
       dbInstance = await Database.load('sqlite:kamitia.db');
@@ -234,7 +240,7 @@ export async function getDb(): Promise<any> {
       await initDb(dbInstance);
     }
   }
-  return dbInstance;
+  return dbInstance as LocalDatabase;
 }
 
 export async function closeDb(): Promise<void> {
