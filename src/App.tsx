@@ -15,6 +15,7 @@ import { RoleRedirect } from './components/RoleRedirect';
 
 import { SuperAdminDashboard } from './pages/dashboards/SuperAdminDashboard';
 import { DirectionDashboard } from './pages/dashboards/DirectionDashboard';
+import { InscriptionPage } from './pages/direction/InscriptionPage';
 import { SecretaireDashboard } from './pages/dashboards/SecretaireDashboard';
 import { ProfesseurDashboard } from './pages/dashboards/ProfesseurDashboard';
 import { DevicesList } from './pages/superadmin/DevicesList';
@@ -145,6 +146,7 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['direction']} />}>
                 <Route element={<DashboardLayout />}>
                   <Route path="/direction" element={<DirectionDashboard />} />
+                  <Route path="/direction/inscription" element={<InscriptionPage />} />
                   <Route path="/direction/academic" element={<AcademicYearsList />} />
                   <Route path="/direction/academic/:yearId" element={<AcademicYearDetails />} />
                   <Route path="/direction/structure" element={<SectionsList />} />

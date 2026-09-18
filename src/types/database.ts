@@ -86,10 +86,23 @@ export interface Student extends BaseSyncEntity {
   birth_date: string | null;
   birth_place: string | null;
   address: string | null;
+  city: string | null;
+  neighborhood: string | null;
+  nationality: string | null;
   contact_phone: string | null;
   contact_email: string | null;
   parent_name: string | null;
   parent_contact: string | null;
+  parent_city: string | null;
+  parent_neighborhood: string | null;
+  parent_whatsapp: string | null;
+  parent_profession: string | null;
+  parent_relation: string | null;
+  financial_sponsor: boolean | number | null;
+  schooling_regime: string | null;
+  previous_school: string | null;
+  previous_class: string | null;
+  previous_year: string | null;
 }
 
 export interface Teacher extends BaseSyncEntity {
@@ -106,6 +119,36 @@ export interface Subject extends BaseSyncEntity {
   name: string;
   code: string | null;
   description: string | null;
+}
+
+export interface ClassSubject extends BaseSyncEntity {
+  school_id: string;
+  academic_year_id: string;
+  class_id: string;
+  subject_id: string;
+  coefficient: number | null;
+  weekly_hours: number | null;
+  subject_type: string | null;
+  is_mandatory: number;
+  is_active: number;
+  teacher_id: string | null;
+  color_icon: string | null;
+  order_index: number;
+}
+
+export interface SubjectTemplate extends BaseSyncEntity {
+  school_id: string;
+  name: string;
+}
+
+export interface SubjectTemplateItem extends BaseSyncEntity {
+  template_id: string;
+  subject_id: string;
+  coefficient: number | null;
+  weekly_hours: number | null;
+  subject_type: string | null;
+  is_mandatory: number;
+  order_index: number;
 }
 
 export interface Enrollment extends BaseSyncEntity {

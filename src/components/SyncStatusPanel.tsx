@@ -106,6 +106,15 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
     }
   };
 
+  const handleClearErrors = async () => {
+    try {
+      await SyncService.clearDeadMutations();
+      await refresh();
+    } catch (err) {
+      console.error('[SyncStatusPanel] clear errors failed:', err);
+    }
+  };
+
   // Determine overall status
   const getStatus = (): { label: string; color: string; dot: string } => {
     if (!isOnline)
@@ -115,7 +124,7 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
     if (stats.conflictCount > 0)
       return { label: `${stats.conflictCount} conflit(s)`, color: '#c0392b', dot: '#c0392b' };
     if (stats.deadCount > 0)
-      return { label: `${stats.deadCount} erreur(s)`, color: '#e67e22', dot: '#e67e22' };
+      return { label: `${stats.deadCount} erreur(s)`, color: '#ea580c', dot: '#ea580c' };
     if (stats.pendingCount > 0)
       return { label: `${stats.pendingCount} en attente`, color: '#f39c12', dot: '#f39c12' };
     return { label: 'Synchronisé', color: '#27ae60', dot: '#27ae60' };
@@ -222,11 +231,22 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
                 color={stats.pendingCount > 0 ? 'var(--text-warning)' : 'var(--text-success)'}
               />
               {stats.deadCount > 0 && (
-                <StatusRow
-                  label="Erreurs de sync"
-                  value={`${stats.deadCount} (échecs)`}
-                  color="var(--text-warning)"
-                />
+                <div style={{ marginTop: '8px', padding: '12px', background: '#fff7ed', borderRadius: '10px', border: '1px solid #ffedd5', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#c2410c' }}>
+                      {stats.deadCount} erreur(s) de sync (échecs)
+                    </span>
+                    <button
+                      onClick={handleClearErrors}
+                      style={{ padding: '4px 10px', background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Effacer les erreurs
+                    </button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#9a3412', lineHeight: 1.4 }}>
+                    Tentatives de synchronisation serveur en attente sans connexion. Vos données locales sont bien enregistrées en sécurité.
+                  </p>
+                </div>
               )}
               {stats.conflictCount > 0 && (
                 <StatusRow

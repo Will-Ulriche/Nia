@@ -12,6 +12,45 @@ export class StructureService {
     return db.select<Section[]>(`SELECT * FROM sections WHERE school_id = $1 AND deleted_at IS NULL ORDER BY name ASC`, [schoolId]);
   }
 
+  static async initializeDefaultStructure(schoolId: string): Promise<void> {
+    const db = await getDb();
+    const existingSections = await this.listSections(schoolId);
+    
+    // Create Sections if they don't exist
+    let collegeSection = existingSections.find(s => s.name === 'COLLÈGE');
+    if (!collegeSection) {
+      collegeSection = await this.createSection({ school_id: schoolId, name: 'COLLÈGE' });
+    }
+    
+    let lyceeSection = existingSections.find(s => s.name === 'LYCÉE');
+    if (!lyceeSection) {
+      lyceeSection = await this.createSection({ school_id: schoolId, name: 'LYCÉE' });
+    }
+
+    const existingLevels = await this.listLevels(schoolId);
+
+    // Create default College levels
+    const collegeLevels = [
+      { name: '6e', order: 1 }, { name: '5e', order: 2 }, 
+      { name: '4e', order: 3 }, { name: '3e', order: 4 }
+    ];
+    for (const lvl of collegeLevels) {
+      if (!existingLevels.find(l => l.name === lvl.name && l.section_id === collegeSection!.id)) {
+        await this.createLevel({ school_id: schoolId, section_id: collegeSection.id, name: lvl.name, level_order: lvl.order });
+      }
+    }
+
+    // Create default Lycée levels
+    const lyceeLevels = [
+      { name: '2nde', order: 5 }, { name: '1ère', order: 6 }, { name: 'Terminale', order: 7 }
+    ];
+    for (const lvl of lyceeLevels) {
+      if (!existingLevels.find(l => l.name === lvl.name && l.section_id === lyceeSection!.id)) {
+        await this.createLevel({ school_id: schoolId, section_id: lyceeSection.id, name: lvl.name, level_order: lvl.order });
+      }
+    }
+  }
+
   static async createSection(payload: Partial<Section>): Promise<Section> {
     const db = await getDb();
     const record: Section = { id: makeId(), version: 1, created_at: now(), updated_at: now(), updated_by: null, device_id: null, deleted_at: null, ...payload } as Section;
@@ -92,6 +131,41 @@ export class StructureService {
     if (levelId) { sql += ` AND c.level_id = $${idx++}`; params.push(levelId); }
     sql += ' ORDER BY c.name ASC';
     return db.select<Class[]>(sql, params);
+  }
+
+  static async listClassesWithEnrollmentCount(schoolId: string, academicYearId: string): Promise<(Class & { level_name?: string, series_name?: string, section_id?: string, effectif?: number })[]> {
+    const db = await getDb();
+
+    // Fetch all needed tables separately (compatible with WebSqlMock)
+    const [allClasses, allLevels, allSeries, allEnrollments] = await Promise.all([
+      db.select<any[]>(`SELECT * FROM classes WHERE school_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL`, [schoolId, academicYearId]),
+      db.select<any[]>(`SELECT * FROM levels WHERE school_id = $1 AND deleted_at IS NULL`, [schoolId]),
+      db.select<any[]>(`SELECT * FROM series WHERE school_id = $1 AND deleted_at IS NULL`, [schoolId]),
+      db.select<any[]>(`SELECT * FROM enrollments WHERE school_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL`, [schoolId, academicYearId]),
+    ]);
+
+    // Manual join in JavaScript
+    const enriched = allClasses.map((c: any) => {
+      const level = allLevels.find((l: any) => l.id === c.level_id);
+      const series = allSeries.find((s: any) => s.id === c.series_id);
+      const effectif = allEnrollments.filter((e: any) => e.class_id === c.id && e.status === 'active').length;
+      return {
+        ...c,
+        level_name: level?.name,
+        section_id: level?.section_id,
+        level_order: level?.level_order ?? 0,
+        series_name: series?.name,
+        effectif,
+      };
+    });
+
+    // Sort by level_order then class name
+    enriched.sort((a: any, b: any) => {
+      if (a.level_order !== b.level_order) return a.level_order - b.level_order;
+      return a.name.localeCompare(b.name);
+    });
+
+    return enriched;
   }
 
   static async createClass(payload: Partial<Class>): Promise<Class> {

@@ -1,12 +1,14 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useRole } from '../hooks/useAuth';
 import { usePermission } from '../hooks/usePermission';
+import { useAcademic } from '../context/AcademicContext';
 import { SyncStatusPanel } from '../components/SyncStatusPanel';
 
 export function DashboardLayout() {
   const { profile, originalProfile, signOut, stopImpersonating } = useAuth();
   const { isSuperAdmin, isDirection, isSecretary, isTeacher } = useRole();
   const permissions = usePermission();
+  const { activeYear, selectedYear, academicYears, setSelectedYear } = useAcademic();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -30,9 +32,8 @@ export function DashboardLayout() {
 
     if (isDirection) {
       links.push({ path: '/direction', label: 'Tableau de bord', icon: 'ti-layout-dashboard', color: 'var(--text-primary)' });
+      links.push({ path: '/direction/inscription', label: 'Inscription des élèves', icon: 'ti-user-plus', color: 'var(--text-primary)' });
       links.push({ path: '/direction/academic', label: 'Années scolaires', icon: 'ti-calendar', color: 'var(--text-accent)' });
-      links.push({ path: '/direction/structure', label: 'Structure scolaire', icon: 'ti-sitemap', color: 'var(--text-accent)' });
-      links.push({ path: '/direction/subjects', label: 'Matières', icon: 'ti-book', color: 'var(--text-accent)' });
       links.push({ path: '/direction/teachers', label: 'Enseignants', icon: 'ti-users', color: 'var(--text-primary)' });
       links.push({ path: '/direction/students', label: 'Élèves', icon: 'ti-school', color: 'var(--text-primary)' });
       links.push({ path: '/direction/timetables', label: 'Emplois du temps', icon: 'ti-calendar-time', color: 'var(--text-warning)' });
@@ -203,11 +204,66 @@ export function DashboardLayout() {
 
         {/* Main content */}
         <div style={{ flex: 1, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(16px)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.5)', boxShadow: '0 12px 24px rgba(59, 130, 246, 0.05)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px', borderBottom: '1px solid rgba(226, 232, 240, 0.6)', flexShrink: 0 }}>
-            <SyncStatusPanel schoolId={profile?.school_id ?? null} />
-            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '12px', fontWeight: 600, padding: '6px 12px', borderRadius: '99px', background: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)', color: '#fff', boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)' }}>
-              {profile?.school_id ? 'Établissement lié' : 'Plateforme globale'}
-            </span>
+          <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(226, 232, 240, 0.6)', flexShrink: 0, background: '#fff', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
+            {/* GAUCHE : Fil d'Ariane & Sélecteur d'année */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+              <strong style={{ color: '#1e293b' }}>Tableau de bord</strong>
+              <span style={{ color: '#cbd5e1' }}>/</span>
+              {academicYears.length > 0 ? (
+                <select
+                  value={selectedYear?.id || ''}
+                  onChange={(e) => {
+                    const year = academicYears.find(y => y.id === e.target.value) || null;
+                    setSelectedYear(year);
+                  }}
+                  style={{
+                    padding: '5px 12px', borderRadius: '10px', border: '1px solid #bfdbfe',
+                    background: '#eff6ff', color: '#1d4ed8', fontWeight: 700, fontSize: '13px',
+                    cursor: 'pointer', outline: 'none', colorScheme: 'light'
+                  }}
+                  title="Changer l'année scolaire affichée sur le Dashboard"
+                >
+                  {academicYears.map((y) => (
+                    <option key={y.id} value={y.id}>
+                      Année {y.name} {y.is_active ? '(Active)' : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ color: '#64748b' }}>
+                  {activeYear ? `Année ${activeYear.name}` : 'Année en cours'}
+                </span>
+              )}
+            </div>
+
+            {/* DROITE : Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {/* Barre de recherche */}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <i className="ti ti-search" style={{ position: 'absolute', left: '12px', color: '#94a3b8', fontSize: '16px' }} />
+                <input 
+                  type="text" 
+                  placeholder="Chercher un élève, un ..." 
+                  style={{ padding: '8px 12px 8px 36px', borderRadius: '20px', border: '1px solid #e2e8f0', outline: 'none', width: '250px', fontSize: '13px', background: '#fff' }}
+                />
+                <div style={{ position: 'absolute', right: '6px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', color: '#64748b', fontWeight: 600 }}>
+                  ⌘K
+                </div>
+              </div>
+
+              {/* Badge Synchronisé */}
+              <SyncStatusPanel schoolId={profile?.school_id ?? null} />
+
+              {/* Bouton Mode Sombre */}
+              <button style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f8fafc'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; }}>
+                <i className="ti ti-moon" style={{ fontSize: '18px' }} />
+              </button>
+
+              {/* Bouton Notifications */}
+              <button style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f8fafc'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; }}>
+                <i className="ti ti-bell" style={{ fontSize: '18px' }} />
+              </button>
+            </div>
           </div>
           <div style={{ padding: '20px', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <Outlet />

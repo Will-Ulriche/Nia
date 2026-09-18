@@ -1,9 +1,10 @@
-import { getDb } from './local/db';
+import { getDb, ENABLE_REMOTE_SYNC } from './local/db';
 import type { AcademicYear, Period } from '../types/database';
 
 export class AcademicService {
   // Utility for queuing mutation
   private static async queueMutation(tableName: string, operation: string, payload: any) {
+    if (!ENABLE_REMOTE_SYNC) return; // Skip when sync is disabled
     const db = await getDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -58,6 +59,37 @@ export class AcademicService {
     );
 
     await this.queueMutation('academic_years', 'INSERT', fullPayload);
+
+    // Auto-generate standard 3 trimesters for this new academic year if start_date is set
+    if (fullPayload.start_date && fullPayload.school_id) {
+      const startYear = parseInt(fullPayload.start_date.split('-')[0]) || new Date().getFullYear();
+      const nextYear = startYear + 1;
+
+      await this.createPeriod({
+        school_id: fullPayload.school_id,
+        academic_year_id: fullPayload.id,
+        name: 'Trimestre 1',
+        start_date: `${startYear}-09-01`,
+        end_date: `${startYear}-11-30`
+      });
+
+      await this.createPeriod({
+        school_id: fullPayload.school_id,
+        academic_year_id: fullPayload.id,
+        name: 'Trimestre 2',
+        start_date: `${startYear}-12-01`,
+        end_date: `${nextYear}-02-28`
+      });
+
+      await this.createPeriod({
+        school_id: fullPayload.school_id,
+        academic_year_id: fullPayload.id,
+        name: 'Trimestre 3',
+        start_date: `${nextYear}-03-01`,
+        end_date: `${nextYear}-06-30`
+      });
+    }
+
     return fullPayload;
   }
 
@@ -96,6 +128,13 @@ export class AcademicService {
     // 2. Activer la bonne
     await db.execute(`UPDATE academic_years SET is_active = 1, updated_at = $1 WHERE id = $2`, [now, yearId]);
     await this.queueMutation('academic_years', 'UPDATE', { id: yearId, is_active: true });
+  }
+
+  static async deleteAcademicYear(id: string): Promise<void> {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    await db.execute(`UPDATE academic_years SET deleted_at = $1 WHERE id = $2`, [now, id]);
+    await this.queueMutation('academic_years', 'DELETE', { id });
   }
 
   // === PERIODS ===
@@ -162,5 +201,57 @@ export class AcademicService {
     const now = new Date().toISOString();
     await db.execute(`UPDATE periods SET deleted_at = $1 WHERE id = $2`, [now, id]);
     await this.queueMutation('periods', 'DELETE', { id });
+  }
+
+  // === SEED ===
+  static async seedAcademicData(schoolId: string): Promise<void> {
+    const existingYears = await this.listAcademicYears(schoolId);
+    if (existingYears.length > 0) {
+      return; // Already seeded
+    }
+
+    const yearsToSeed = [
+      { name: '2022-2023', start: '2022-09-01', end: '2023-06-30', active: false },
+      { name: '2023-2024', start: '2023-09-01', end: '2024-06-30', active: false },
+      { name: '2024-2025', start: '2024-09-01', end: '2025-06-30', active: true },
+    ];
+
+    for (const y of yearsToSeed) {
+      const year = await this.createAcademicYear({
+        school_id: schoolId,
+        name: y.name,
+        start_date: y.start,
+        end_date: y.end,
+        is_active: y.active
+      });
+
+      // Seed Trimesters
+      const startYear = parseInt(y.start.split('-')[0]);
+      const nextYear = startYear + 1;
+      
+      await this.createPeriod({
+        school_id: schoolId,
+        academic_year_id: year.id,
+        name: 'Trimestre 1',
+        start_date: `${startYear}-09-01`,
+        end_date: `${startYear}-11-30`
+      });
+
+      await this.createPeriod({
+        school_id: schoolId,
+        academic_year_id: year.id,
+        name: 'Trimestre 2',
+        start_date: `${startYear}-12-01`,
+        end_date: `${nextYear}-02-28`
+      });
+
+      await this.createPeriod({
+        school_id: schoolId,
+        academic_year_id: year.id,
+        name: 'Trimestre 3',
+        start_date: `${nextYear}-03-01`,
+        end_date: `${nextYear}-06-30`
+      });
+    }
   }
 }

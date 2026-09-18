@@ -12,6 +12,32 @@ export class StudentService {
     return db.select<Student[]>(`SELECT * FROM students WHERE school_id = $1 AND deleted_at IS NULL ORDER BY last_name ASC`, [schoolId]);
   }
 
+  static async listStudentsWithEnrollments(schoolId: string, academicYearId: string): Promise<(Student & { class_name?: string, class_id?: string, level_id?: string, level_name?: string, enrollment_status?: string, enrollment_id?: string })[]> {
+    const db = await getDb();
+    
+    // Pour assurer la compatibilité avec WebSqlMock (LocalStorage) qui ne gère pas les JOIN,
+    // on fait les jointures manuellement en Javascript.
+    const students = await db.select<Student[]>(`SELECT * FROM students WHERE school_id = $1 AND deleted_at IS NULL ORDER BY last_name ASC`, [schoolId]);
+    const enrollments = await db.select<Enrollment[]>(`SELECT * FROM enrollments WHERE school_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL`, [schoolId, academicYearId]);
+    const classes = await db.select<any[]>(`SELECT * FROM classes WHERE school_id = $1 AND deleted_at IS NULL`, [schoolId]);
+    const levels = await db.select<any[]>(`SELECT * FROM levels WHERE school_id = $1 AND deleted_at IS NULL`, [schoolId]);
+
+    return students.map(student => {
+      const enrollment = enrollments.find(e => e.student_id === student.id);
+      const studentClass = enrollment ? classes.find(c => c.id === enrollment.class_id) : null;
+      const level = studentClass ? levels.find(l => l.id === studentClass.level_id) : null;
+      return {
+        ...student,
+        enrollment_id: enrollment ? enrollment.id : undefined,
+        enrollment_status: enrollment ? enrollment.status : undefined,
+        class_id: studentClass ? studentClass.id : undefined,
+        class_name: studentClass ? studentClass.name : undefined,
+        level_id: level ? level.id : undefined,
+        level_name: level ? level.name : undefined,
+      };
+    });
+  }
+
   static async getStudent(id: string): Promise<Student> {
     const db = await getDb();
     const rows = await db.select<Student[]>(`SELECT * FROM students WHERE id = $1`, [id]);
@@ -23,9 +49,9 @@ export class StudentService {
     const db = await getDb();
     const record: Student = { id: makeId(), version: 1, created_at: now(), updated_at: now(), updated_by: null, device_id: null, deleted_at: null, ...payload } as Student;
     await db.execute(
-      `INSERT INTO students (id, school_id, matricule, first_name, last_name, gender, birth_date, birth_place, address, contact_phone, contact_email, parent_name, parent_contact, version, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-      [record.id, record.school_id, record.matricule, record.first_name, record.last_name, record.gender, record.birth_date, record.birth_place, record.address, record.contact_phone, record.contact_email, record.parent_name, record.parent_contact, record.version, record.created_at, record.updated_at]
+      `INSERT INTO students (id, school_id, matricule, first_name, last_name, gender, birth_date, birth_place, address, city, neighborhood, nationality, contact_phone, contact_email, parent_name, parent_contact, parent_city, parent_neighborhood, parent_whatsapp, parent_profession, parent_relation, financial_sponsor, schooling_regime, previous_school, previous_class, previous_year, version, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)`,
+      [record.id, record.school_id, record.matricule, record.first_name, record.last_name, record.gender, record.birth_date, record.birth_place, record.address, record.city, record.neighborhood, record.nationality, record.contact_phone, record.contact_email, record.parent_name, record.parent_contact, record.parent_city, record.parent_neighborhood, record.parent_whatsapp, record.parent_profession, record.parent_relation, record.financial_sponsor, record.schooling_regime, record.previous_school, record.previous_class, record.previous_year, record.version, record.created_at, record.updated_at]
     );
     await queueMutation('students', 'INSERT', record);
     return record;
@@ -37,7 +63,7 @@ export class StudentService {
     const sets: string[] = [`updated_at = $1`];
     const vals: any[] = [updatedAt];
     let idx = 2;
-    const fields = ['matricule','first_name','last_name','gender','birth_date','birth_place','address','contact_phone','contact_email','parent_name','parent_contact'] as const;
+    const fields = ['matricule','first_name','last_name','gender','birth_date','birth_place','address','city','neighborhood','nationality','contact_phone','contact_email','parent_name','parent_contact','parent_city','parent_neighborhood','parent_whatsapp','parent_profession','parent_relation','financial_sponsor','schooling_regime','previous_school','previous_class','previous_year'] as const;
     for (const f of fields) {
       if ((payload as any)[f] !== undefined) { sets.push(`${f} = $${idx++}`); vals.push((payload as any)[f]); }
     }

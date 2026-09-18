@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getDb } from './local/db';
+import { getDb, ENABLE_REMOTE_SYNC } from './local/db';
 import { ConflictService } from './conflict.service';
 import { DeviceService } from './device.service';
 
@@ -93,6 +93,7 @@ export class SyncService {
    * Utilise INSERT OR REPLACE pour l'idempotence.
    */
   static async pullData(schoolId: string) {
+    if (!ENABLE_REMOTE_SYNC) return;
     if (!navigator.onLine) throw new Error('Offline: cannot pull');
 
     if (await DeviceService.isRevoked()) {
@@ -155,6 +156,7 @@ export class SyncService {
    * Idempotent : utilise upsert côté Supabase.
    */
   static async pushMutations() {
+    if (!ENABLE_REMOTE_SYNC) return;
     if (!navigator.onLine) throw new Error('Offline: cannot push');
 
     if (await DeviceService.isRevoked()) {
@@ -272,6 +274,7 @@ export class SyncService {
    * Retourne le nombre de mutations en attente (pour affichage dans l'UI).
    */
   static async getPendingMutationCount(): Promise<number> {
+    if (!ENABLE_REMOTE_SYNC) return 0;
     const db = await getDb();
     const rows = await db.select<{ count: number }[]>(
       `SELECT COUNT(*) as count FROM mutations_queue WHERE status IN ('pending', 'error')`
@@ -283,11 +286,32 @@ export class SyncService {
    * Retourne les mutations en erreur définitive (pour alerte UI).
    */
   static async getDeadMutations(): Promise<any[]> {
+    if (!ENABLE_REMOTE_SYNC) return [];
     const db = await getDb();
     return db.select<any[]>(
       `SELECT * FROM mutations_queue WHERE status = 'error' AND retry_count >= $1 ORDER BY created_at ASC`,
       [MAX_RETRIES]
     );
+  }
+
+  /**
+   * Efface les mutations bloquées en erreur pour réinitialiser les compteurs d'erreur UI.
+   */
+  static async clearDeadMutations(): Promise<void> {
+    const db = await getDb();
+    await db.execute(`DELETE FROM mutations_queue`);
+    
+    // Purge mutations_queue directly from localStorage if present
+    try {
+      const raw = localStorage.getItem('kemitia_local_db');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.mutations_queue = [];
+        localStorage.setItem('kemitia_local_db', JSON.stringify(parsed));
+      }
+    } catch (e) {
+      console.warn('Failed to clear mutations_queue from localStorage', e);
+    }
   }
 
   /**

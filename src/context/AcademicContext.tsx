@@ -22,26 +22,27 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshYears = async () => {
-    if (!school) {
-      setAcademicYears([]);
-      setActiveYear(null);
-      setSelectedYear(null);
-      setIsLoading(false);
-      return;
-    }
+    const schoolId = school?.id || 'sch_demo_01';
 
     try {
-      setIsLoading(true);
-      const years = await AcademicService.listAcademicYears(school.id);
+      // Only show full loading spinner on first load, not on subsequent refreshes
+      if (academicYears.length === 0) {
+        setIsLoading(true);
+      }
+      
+      const years = await AcademicService.listAcademicYears(schoolId);
       setAcademicYears(years);
       
-      const active = years.find((y) => y.is_active) || null;
+      const active = years.find((y) => y.is_active) || (years.length > 0 ? years[0] : null);
       setActiveYear(active);
       
       // On conserve l'année sélectionnée si elle existe toujours, sinon on prend l'active
-      if (!selectedYear || !years.find(y => y.id === selectedYear.id)) {
-        setSelectedYear(active);
-      }
+      setSelectedYear((prev) => {
+        if (prev && years.find((y) => y.id === prev.id)) {
+          return prev;
+        }
+        return active;
+      });
     } catch (error) {
       console.error('Error fetching academic years:', error);
     } finally {
