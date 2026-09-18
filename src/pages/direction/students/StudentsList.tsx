@@ -20,7 +20,7 @@ import { InscriptionForm } from '../../../components/forms/InscriptionForm';
 
 export function StudentsList() {
   const { school } = useSchool();
-  const { selectedYear, refreshYears } = useAcademic();
+  const { selectedYear } = useAcademic();
   const [students, setStudents] = useState<StudentWithEnrollment[]>([]);
   const [classes, setClasses] = useState<(Class & { level_name?: string })[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
