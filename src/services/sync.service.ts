@@ -122,12 +122,38 @@ export class SyncService {
         if (error) { console.warn(`[Sync] Pull error on ${table}:`, error.message); continue; }
         if (!data || data.length === 0) { continue; }
 
+        const pendingMutationsRows = await db.select<any[]>(
+          `SELECT * FROM mutations_queue WHERE table_name = $1 AND status IN ('pending', 'processing')`,
+          [table]
+        );
+        const tableMutations = pendingMutationsRows.map(m => {
+          let payloadObj;
+          try { payloadObj = JSON.parse(m.payload); } catch (e) { payloadObj = {}; }
+          return { ...m, payloadObj };
+        });
+
         const columns = TABLE_COLUMNS[table];
         const boolCols = BOOLEAN_COLUMNS[table] || [];
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
 
         for (const row of data) {
-          // Idempotent: INSERT OR REPLACE handles both new rows and updates
+          const pendingMutation = tableMutations.find(m => m.payloadObj?.id === row.id);
+
+          if (pendingMutation) {
+            if (pendingMutation.operation === 'UPDATE') {
+              const { hasConflict, resolution } = await ConflictService.detectAndResolve(table, pendingMutation.payloadObj, row);
+              if (hasConflict) {
+                if (resolution === 'auto_lww') {
+                  await db.execute(`DELETE FROM mutations_queue WHERE id = $1`, [pendingMutation.id]);
+                }
+                continue;
+              }
+            } else if (pendingMutation.operation === 'DELETE') {
+              continue;
+            }
+          }
+
+          // Pas de conflit ou pas de mutation bloquante : on applique la donnée distante (Idempotent)
           const values = columns.map(col => {
             const v = row[col];
             if (boolCols.includes(col)) return v ? 1 : 0;
@@ -233,9 +259,10 @@ export class SyncService {
 
         } else if (mutation.operation === 'DELETE') {
           // Soft delete
+          const nowIso = new Date().toISOString();
           const { error } = await supabase
             .from(mutation.table_name)
-            .update({ deleted_at: new Date().toISOString() })
+            .update({ deleted_at: nowIso, updated_at: nowIso })
             .eq('id', payload.id);
           if (error) throw error;
         }
