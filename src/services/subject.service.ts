@@ -7,9 +7,12 @@ const makeId = () => crypto.randomUUID();
 export class SubjectService {
   // === GLOBAL SUBJECTS (Library) ===
 
-  static async listLibrarySubjects(schoolId: string): Promise<Subject[]> {
+  static async listLibrarySubjects(schoolId: string, showArchived = false): Promise<Subject[]> {
     const db = await getDb();
-    return db.select<Subject[]>(`SELECT * FROM subjects WHERE school_id = $1 AND deleted_at IS NULL ORDER BY name ASC`, [schoolId]);
+    const query = showArchived
+      ? `SELECT * FROM subjects WHERE school_id = $1 ORDER BY name ASC`
+      : `SELECT * FROM subjects WHERE school_id = $1 AND deleted_at IS NULL ORDER BY name ASC`;
+    return db.select<Subject[]>(query, [schoolId]);
   }
 
   static async createLibrarySubject(payload: Partial<Subject>): Promise<Subject> {
@@ -32,6 +35,35 @@ export class SubjectService {
     const db = await getDb();
     await db.execute(`UPDATE subjects SET deleted_at = $1 WHERE id = $2`, [now(), id]);
     await queueMutation('subjects', 'DELETE', { id });
+  }
+
+  static async updateLibrarySubject(id: string, payload: Partial<Subject>): Promise<Subject> {
+    const db = await getDb();
+    const updatedAt = now();
+    const sets: string[] = [`updated_at = $1`];
+    const vals: any[] = [updatedAt];
+    let idx = 2;
+    
+    const fields = ['name', 'code', 'description'];
+    for (const field of fields) {
+      if (payload[field as keyof Subject] !== undefined) {
+        sets.push(`${field} = $${idx++}`);
+        vals.push(payload[field as keyof Subject]);
+      }
+    }
+    vals.push(id);
+    
+    await db.execute(`UPDATE subjects SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
+    await queueMutation('subjects', 'UPDATE', { id, ...payload });
+    
+    const rows = await db.select<Subject[]>(`SELECT * FROM subjects WHERE id = $1`, [id]);
+    return rows[0];
+  }
+
+  static async reactivateLibrarySubject(id: string): Promise<void> {
+    const db = await getDb();
+    await db.execute(`UPDATE subjects SET deleted_at = NULL, updated_at = $1 WHERE id = $2`, [now(), id]);
+    await queueMutation('subjects', 'UPDATE', { id, deleted_at: null });
   }
 
   // === CLASS SUBJECTS (Assigned subjects) ===

@@ -12,6 +12,7 @@ interface StudentWithEnrollment extends Student {
   class_id?: string;
   level_id?: string;
   level_name?: string;
+  enrollment_id?: string;
   enrollment_status?: string;
 }
 
@@ -19,16 +20,18 @@ import { InscriptionForm } from '../../../components/forms/InscriptionForm';
 
 export function StudentsList() {
   const { school } = useSchool();
-  const { activeYear, academicYears, refreshYears } = useAcademic();
+  const { activeYear, refreshYears } = useAcademic();
   const [students, setStudents] = useState<StudentWithEnrollment[]>([]);
   const [classes, setClasses] = useState<(Class & { level_name?: string })[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentWithEnrollment | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  
+  
 
   // Filter states
+  const [, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedClass, setSelectedClass] = useState('');

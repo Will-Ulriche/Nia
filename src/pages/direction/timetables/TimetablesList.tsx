@@ -50,7 +50,7 @@ export function TimetablesList() {
         const [clsData, tData, sData] = await Promise.all([
           StructureService.listClasses(school.id, selectedYear.id),
           TeacherService.listTeachers(school.id),
-          SubjectService.listSubjects(school.id)
+          SubjectService.listLibrarySubjects(school.id)
         ]);
         setClasses(clsData);
         setTeachers(tData);

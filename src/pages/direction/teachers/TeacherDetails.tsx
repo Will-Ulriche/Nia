@@ -30,7 +30,7 @@ export function TeacherDetails() {
       setTeacher(t);
       const [assignData, subjectData, classData] = await Promise.all([
         TeacherService.listAssignments(school.id, selectedYear?.id, teacherId),
-        SubjectService.listSubjects(school.id),
+        SubjectService.listLibrarySubjects(school.id),
         selectedYear ? StructureService.listClasses(school.id, selectedYear.id) : Promise.resolve([]),
       ]);
       setAssignments(assignData);

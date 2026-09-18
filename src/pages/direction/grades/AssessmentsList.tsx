@@ -43,7 +43,7 @@ export function AssessmentsList() {
       try {
         const [clsData, subjData, perData] = await Promise.all([
           StructureService.listClasses(school.id, selectedYear.id),
-          SubjectService.listSubjects(school.id),
+          SubjectService.listLibrarySubjects(school.id),
           AcademicService.listPeriods(selectedYear.id)
         ]);
         setClasses(clsData);

@@ -7,14 +7,14 @@ import { CoefficientModal } from '../../components/forms/CoefficientModal';
 import { ClassManagerModal } from '../../components/modals/ClassManagerModal';
 
 export function DirectionDashboard() {
-  const { schoolLoading } = useSchool();
+  const { isLoading } = useSchool();
   const navigate = useNavigate();
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isCoefModalOpen, setIsCoefModalOpen] = useState(false);
   const [isClassManagerOpen, setIsClassManagerOpen] = useState(false);
   const [isSubjectManagerOpen, setIsSubjectManagerOpen] = useState(false);
 
-  if (schoolLoading) {
+  if (isLoading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#7f8c8d' }}>
         Chargement...

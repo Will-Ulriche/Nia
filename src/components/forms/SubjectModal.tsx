@@ -29,7 +29,7 @@ export function SubjectModal({ isOpen, onClose }: SubjectModalProps) {
         description: formData.description.trim() || undefined,
         is_archived: false,
       };
-      await SubjectService.createSubject(payload);
+      await SubjectService.createLibrarySubject(payload);
       setFormData({ name: '', code: '', description: '' });
       onClose();
     } catch (err) {

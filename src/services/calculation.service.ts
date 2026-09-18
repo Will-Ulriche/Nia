@@ -1,5 +1,5 @@
 import { getDb, queueMutation } from './local/db';
-import type Database from '@tauri-apps/plugin-sql';
+import type { LocalDatabase } from './local/db';
 import type { Average } from '../types/database';
 
 // -------------------------------------------------------
@@ -176,7 +176,7 @@ export class CalculationService {
     }
   }
 
-  private static async _upsertAverage(db: Database, payload: Partial<Average>) {
+  private static async _upsertAverage(db: LocalDatabase, payload: Partial<Average>) {
     // Two separate queries to avoid dynamic param count, which can be fragile
     // with some SQLite drivers (including Tauri's plugin-sql).
     let existing: { id: string }[];

@@ -26,7 +26,7 @@ export function SubjectsList() {
     if (!school) return;
     try {
       setIsLoading(true);
-      const data = await SubjectService.listSubjects(school.id, showArchived);
+      const data = await SubjectService.listLibrarySubjects(school.id, showArchived);
       setSubjects(data);
     } catch (err) {
       setError('Erreur lors du chargement des matières');
@@ -62,9 +62,9 @@ export function SubjectsList() {
         description: formData.description.trim() || null,
       };
       if (editingSubject) {
-        await SubjectService.updateSubject(editingSubject.id, payload);
+        await SubjectService.updateLibrarySubject(editingSubject.id, payload);
       } else {
-        await SubjectService.createSubject(payload);
+        await SubjectService.createLibrarySubject(payload);
       }
       setShowForm(false);
       setFormData(emptyForm);
@@ -83,9 +83,9 @@ export function SubjectsList() {
     if (!confirm(`Voulez-vous ${action} la matière "${subject.name}" ?`)) return;
     try {
       if (isArchived) {
-        await SubjectService.reactivateSubject(subject.id);
+        await SubjectService.reactivateLibrarySubject(subject.id);
       } else {
-        await SubjectService.deactivateSubject(subject.id);
+        await SubjectService.deleteLibrarySubject(subject.id);
       }
       await loadSubjects();
     } catch (err) {

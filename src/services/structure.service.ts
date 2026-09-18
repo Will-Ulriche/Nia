@@ -13,7 +13,6 @@ export class StructureService {
   }
 
   static async initializeDefaultStructure(schoolId: string): Promise<void> {
-    const db = await getDb();
     const existingSections = await this.listSections(schoolId);
     
     // Create Sections if they don't exist

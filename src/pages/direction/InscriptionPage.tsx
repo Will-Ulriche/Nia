@@ -1,11 +1,11 @@
-import React from 'react';
+
 import { useSchool } from '../../hooks/useModules';
 import { InscriptionForm } from '../../components/forms/InscriptionForm';
 
 export function InscriptionPage() {
-  const { schoolLoading } = useSchool();
+  const { isLoading } = useSchool();
 
-  if (schoolLoading) {
+  if (isLoading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#7f8c8d' }}>
         Chargement...
