@@ -7,7 +7,7 @@ import type { Class } from '../../types/database';
 
 export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => void, initialData?: any }) {
   const { school } = useSchool();
-  const { activeYear, academicYears } = useAcademic();
+  const { selectedYear, academicYears } = useAcademic();
   const [classes, setClasses] = useState<Class[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,12 +32,12 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
         profession: initialData.parent_profession || '', adresseParent: '', villeParent: initialData.parent_city || '', quartierParent: initialData.parent_neighborhood || '', 
         responsableFinancier: initialData.financial_sponsor ? 'Oui' : 'Non',
 
-        anneeScolaire: activeYear?.id || '', typeInscription: 'Nouvelle', cycle: '', niveau: '', classe: initialData.class_id || '',
+        anneeScolaire: selectedYear?.id || '', typeInscription: 'Nouvelle', cycle: '', niveau: '', classe: initialData.class_id || '',
         regime: initialData.schooling_regime || 'Externe', ecolePrecedente: initialData.previous_school || '', derniereClasse: initialData.previous_class || '', anneePrecedente: initialData.previous_year || ''
       };
     }
     return {
-      // Élève
+      // Ã‰lÃ¨ve
       matricule: generateMatricule(), nomEleve: '', prenomEleve: '', sexe: 'M', dateNaissance: '', lieuNaissance: '',
       nationalite: '', adresseEleve: '', villeEleve: '', quartierEleve: '', telEleve: '', emailEleve: '',
       // Parent
@@ -52,10 +52,10 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
   const [formData, setFormData] = useState(createInitialForm());
 
   useEffect(() => {
-    if (activeYear) {
-      setFormData(prev => ({ ...prev, anneeScolaire: activeYear.id }));
+    if (selectedYear) {
+      setFormData(prev => ({ ...prev, anneeScolaire: selectedYear.id }));
     }
-  }, [activeYear]);
+  }, [selectedYear]);
 
   useEffect(() => {
     if (school && formData.anneeScolaire) {
@@ -73,7 +73,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!school || !formData.nomEleve.trim() || !formData.prenomEleve.trim()) {
-      setError("Le nom et prénom de l'élève sont obligatoires.");
+      setError("Le nom et prÃ©nom de l'Ã©lÃ¨ve sont obligatoires.");
       return;
     }
 
@@ -124,7 +124,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
             status: 'active'
           });
         }
-        setSuccess("Élève modifié avec succès !");
+        setSuccess("Ã‰lÃ¨ve modifiÃ© avec succÃ¨s !");
       } else {
         // 1. Create Student
         const newStudent = await StudentService.createStudent({
@@ -165,11 +165,11 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
             status: 'active'
           });
         }
-        setSuccess("Élève inscrit avec succès !");
+        setSuccess("Ã‰lÃ¨ve inscrit avec succÃ¨s !");
       }
 
       if (!initialData) {
-        setFormData({ ...createInitialForm(), anneeScolaire: activeYear?.id || '' });
+        setFormData({ ...createInitialForm(), anneeScolaire: selectedYear?.id || '' });
       }
       if (onSuccess) {
         onSuccess();
@@ -183,7 +183,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
   };
 
   const handleReset = () => {
-    setFormData({ ...createInitialForm(), anneeScolaire: activeYear?.id || '' });
+    setFormData({ ...createInitialForm(), anneeScolaire: selectedYear?.id || '' });
     setError(null);
     setSuccess(null);
   };
@@ -233,7 +233,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '8px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '12px', flexShrink: 0 }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1e3a5f', margin: 0 }}>
-            {initialData ? `Modifier l'élève` : `Nouvelle Inscription`}
+            {initialData ? `Modifier l'Ã©lÃ¨ve` : `Nouvelle Inscription`}
           </h2>
         </div>
 
@@ -251,28 +251,28 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           
           <div className="hide-scrollbar" style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', overflowY: 'auto', paddingBottom: '16px' }}>
-            {/* SECTION : Informations de l'élève */}
+            {/* SECTION : Informations de l'Ã©lÃ¨ve */}
             <div style={{ ...sectionStyle, marginBottom: 0, height: 'fit-content' }}>
-              <h3 style={titleStyle}><i className="ti ti-user" style={{ color: '#3b82f6' }} /> Informations de l'élève</h3>
+              <h3 style={titleStyle}><i className="ti ti-user" style={{ color: '#3b82f6' }} /> Informations de l'Ã©lÃ¨ve</h3>
               
               <div style={gridStyle}>
                 <div style={inputGroupStyle}>
                   <label style={labelStyle}>Matricule</label>
-                  <input style={{...inputStyle, background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed'}} name="matricule" value={formData.matricule} readOnly title="Généré automatiquement" />
+                  <input style={{...inputStyle, background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed'}} name="matricule" value={formData.matricule} readOnly title="GÃ©nÃ©rÃ© automatiquement" />
                 </div>
                 <div style={inputGroupStyle}>
                   <label style={labelStyle}>Nom <span style={{ color: '#ef4444' }}>*</span></label>
                   <input style={inputStyle} name="nomEleve" value={formData.nomEleve} onChange={handleChange} required />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Prénom(s) <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label style={labelStyle}>PrÃ©nom(s) <span style={{ color: '#ef4444' }}>*</span></label>
                   <input style={inputStyle} name="prenomEleve" value={formData.prenomEleve} onChange={handleChange} required />
                 </div>
                 <div style={inputGroupStyle}>
                   <label style={labelStyle}>Sexe</label>
                   <select style={inputStyle} name="sexe" value={formData.sexe} onChange={handleChange}>
                     <option value="M">Masculin</option>
-                    <option value="F">Féminin</option>
+                    <option value="F">FÃ©minin</option>
                   </select>
                 </div>
                 <div style={inputGroupStyle}>
@@ -284,7 +284,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
                   <input style={inputStyle} name="lieuNaissance" value={formData.lieuNaissance} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Nationalité</label>
+                  <label style={labelStyle}>NationalitÃ©</label>
                   <input style={inputStyle} name="nationalite" value={formData.nationalite} onChange={handleChange} />
                 </div>
                 
@@ -301,7 +301,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
                   <input style={inputStyle} name="quartierEleve" value={formData.quartierEleve} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Téléphone</label>
+                  <label style={labelStyle}>TÃ©lÃ©phone</label>
                   <input style={inputStyle} name="telEleve" value={formData.telEleve} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
@@ -321,25 +321,25 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
                   <input style={inputStyle} name="nomParent" value={formData.nomParent} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Prénom</label>
+                  <label style={labelStyle}>PrÃ©nom</label>
                   <input style={inputStyle} name="prenomParent" value={formData.prenomParent} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Relation avec l'élève</label>
+                  <label style={labelStyle}>Relation avec l'Ã©lÃ¨ve</label>
                   <select style={inputStyle} name="relation" value={formData.relation} onChange={handleChange}>
-                    <option value="">Sélectionner...</option>
-                    <option value="Père">Père</option>
-                    <option value="Mère">Mère</option>
-                    <option value="Tuteur">Tuteur légal</option>
+                    <option value="">SÃ©lectionner...</option>
+                    <option value="PÃ¨re">PÃ¨re</option>
+                    <option value="MÃ¨re">MÃ¨re</option>
+                    <option value="Tuteur">Tuteur lÃ©gal</option>
                     <option value="Autre">Autre</option>
                   </select>
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Téléphone principal</label>
+                  <label style={labelStyle}>TÃ©lÃ©phone principal</label>
                   <input style={inputStyle} name="tel1" value={formData.tel1} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Téléphone secondaire</label>
+                  <label style={labelStyle}>TÃ©lÃ©phone secondaire</label>
                   <input style={inputStyle} name="tel2" value={formData.tel2} onChange={handleChange} />
                 </div>
                 <div style={inputGroupStyle}>
@@ -386,9 +386,9 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
               
               <div style={gridStyle}>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Année scolaire</label>
+                  <label style={labelStyle}>AnnÃ©e scolaire</label>
                   <select style={inputStyle} name="anneeScolaire" value={formData.anneeScolaire} onChange={handleChange}>
-                    <option value="">-- Sélectionner --</option>
+                    <option value="">-- SÃ©lectionner --</option>
                     {academicYears.map(ay => (
                       <option key={ay.id} value={ay.id}>{ay.name} {ay.is_active ? '(Active)' : ''}</option>
                     ))}
@@ -398,7 +398,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
                   <label style={labelStyle}>Type d'inscription</label>
                   <select style={inputStyle} name="typeInscription" value={formData.typeInscription} onChange={handleChange}>
                     <option value="Nouvelle">Nouvelle inscription</option>
-                    <option value="Reinscription">Réinscription</option>
+                    <option value="Reinscription">RÃ©inscription</option>
                     <option value="Transfert">Transfert</option>
                   </select>
                 </div>
@@ -412,7 +412,7 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
                   </select>
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>Régime scolaire</label>
+                  <label style={labelStyle}>RÃ©gime scolaire</label>
                   <select style={inputStyle} name="regime" value={formData.regime} onChange={handleChange}>
                     <option value="Externe">Externe</option>
                     <option value="Demi-pensionnaire">Demi-pensionnaire</option>
@@ -423,15 +423,15 @@ export function InscriptionForm({ onSuccess, initialData }: { onSuccess?: () => 
                 {formData.typeInscription === 'Transfert' && (
                   <>
                     <div style={inputGroupStyle}>
-                      <label style={labelStyle}>Établissement précédent</label>
+                      <label style={labelStyle}>Ã‰tablissement prÃ©cÃ©dent</label>
                       <input style={inputStyle} name="ecolePrecedente" value={formData.ecolePrecedente} onChange={handleChange} />
                     </div>
                     <div style={inputGroupStyle}>
-                      <label style={labelStyle}>Dernière classe fréquentée</label>
+                      <label style={labelStyle}>DerniÃ¨re classe frÃ©quentÃ©e</label>
                       <input style={inputStyle} name="derniereClasse" value={formData.derniereClasse} onChange={handleChange} />
                     </div>
                     <div style={inputGroupStyle}>
-                      <label style={labelStyle}>Année scolaire précédente</label>
+                      <label style={labelStyle}>AnnÃ©e scolaire prÃ©cÃ©dente</label>
                       <input style={inputStyle} name="anneePrecedente" value={formData.anneePrecedente} onChange={handleChange} />
                     </div>
                   </>

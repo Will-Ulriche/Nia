@@ -21,7 +21,7 @@ export function DeviceRegistrationModal() {
       const deviceId = await DeviceService.getDeviceId();
       const { data, error } = await supabase
         .from('devices')
-        .select('name, is_revoked')
+        .select('device_name, is_revoked')
         .eq('id', deviceId)
         .single();
       

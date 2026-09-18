@@ -20,7 +20,7 @@ import { InscriptionForm } from '../../../components/forms/InscriptionForm';
 
 export function StudentsList() {
   const { school } = useSchool();
-  const { activeYear, refreshYears } = useAcademic();
+  const { selectedYear, refreshYears } = useAcademic();
   const [students, setStudents] = useState<StudentWithEnrollment[]>([]);
   const [classes, setClasses] = useState<(Class & { level_name?: string })[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -37,27 +37,27 @@ export function StudentsList() {
   const [selectedClass, setSelectedClass] = useState('');
 
   const loadData = async () => {
-    if (!school || !activeYear) return;
+    if (!school || !selectedYear) return;
     try {
       setIsLoading(true);
       const [studentsData, classesData, levelsData] = await Promise.all([
-        StudentService.listStudentsWithEnrollments(school.id, activeYear.id),
-        StructureService.listClasses(school.id, activeYear.id),
+        StudentService.listStudentsWithEnrollments(school.id, selectedYear.id),
+        StructureService.listClasses(school.id, selectedYear.id),
         StructureService.listLevels(school.id)
       ]);
       setStudents(studentsData);
       setClasses(classesData);
       setLevels(levelsData);
     } catch (err) {
-      setError('Erreur lors du chargement des données');
+      setError('Erreur lors du chargement des donnÃ©es');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => { 
-    refreshYears().then(() => loadData());
-  }, [school]);
+    loadData();
+  }, [school, selectedYear]);
 
   // When level changes, reset class selection
   useEffect(() => {
@@ -100,7 +100,7 @@ export function StudentsList() {
   };
 
   const handleDelete = async (student: StudentWithEnrollment) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'élève ${student.last_name} ${student.first_name} ?`)) {
+    if (window.confirm(`ÃŠtes-vous sÃ»r de vouloir supprimer l'Ã©lÃ¨ve ${student.last_name} ${student.first_name} ?`)) {
       try {
         await StudentService.deleteStudent(student.id);
         if (student.enrollment_id) {
@@ -127,16 +127,16 @@ export function StudentsList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
-          <h2 style={{ margin: 0, color: '#1e293b' }}>Élèves</h2>
+          <h2 style={{ margin: 0, color: '#1e293b' }}>Ã‰lÃ¨ves</h2>
           <p style={{ color: '#64748b', margin: '0.25rem 0 0 0', fontSize: '0.95rem' }}>
-            {filteredStudents.length} élève{filteredStudents.length > 1 ? 's' : ''}{hasActiveFilters ? ` sur ${students.length}` : ` enregistré${students.length > 1 ? 's' : ''}`}
+            {filteredStudents.length} Ã©lÃ¨ve{filteredStudents.length > 1 ? 's' : ''}{hasActiveFilters ? ` sur ${students.length}` : ` enregistrÃ©${students.length > 1 ? 's' : ''}`}
           </p>
         </div>
         <button
           onClick={() => openForm()}
           style={{ padding: '0.6rem 1.2rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          <i className="ti ti-plus" /> Nouvel élève
+          <i className="ti ti-plus" /> Nouvel Ã©lÃ¨ve
         </button>
       </div>
 
@@ -154,7 +154,7 @@ export function StudentsList() {
           }} />
           <input
             type="text"
-            placeholder="Rechercher par nom ou matricule…"
+            placeholder="Rechercher par nom ou matriculeâ€¦"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             style={{
@@ -243,7 +243,7 @@ export function StudentsList() {
               onClick={() => { setShowForm(false); setEditingStudent(null); }}
               style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '20px' }}
             >
-              <i className="ti ti-x" /> ✕
+              <i className="ti ti-x" /> âœ•
             </button>
 
             <InscriptionForm onSuccess={handleSuccess} initialData={editingStudent} />
@@ -257,10 +257,10 @@ export function StudentsList() {
         {filteredStudents.length === 0 ? (
           hasActiveFilters ? (
             <div style={{ padding: '3rem 2rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔍</div>
-              <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155', fontWeight: 600 }}>Aucun résultat</h3>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>ðŸ”</div>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155', fontWeight: 600 }}>Aucun rÃ©sultat</h3>
               <p style={{ color: '#64748b', margin: '0 0 1rem 0', fontSize: '0.9rem' }}>
-                Aucun élève ne correspond à vos critères de recherche.
+                Aucun Ã©lÃ¨ve ne correspond Ã  vos critÃ¨res de recherche.
               </p>
               <button
                 onClick={clearFilters}
@@ -269,15 +269,15 @@ export function StudentsList() {
                   border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem'
                 }}
               >
-                Réinitialiser les filtres
+                RÃ©initialiser les filtres
               </button>
             </div>
           ) : (
             <EmptyState
-              icon="👩‍🎓"
-              title="Aucun élève enregistré"
-              description="Commencez par ajouter le premier élève de cet établissement. Vous pourrez l'inscrire directement dans une classe."
-              action={{ label: "+ Nouvel élève", onClick: openForm }}
+              icon="ðŸ‘©â€ðŸŽ“"
+              title="Aucun Ã©lÃ¨ve enregistrÃ©"
+              description="Commencez par ajouter le premier Ã©lÃ¨ve de cet Ã©tablissement. Vous pourrez l'inscrire directement dans une classe."
+              action={{ label: "+ Nouvel Ã©lÃ¨ve", onClick: openForm }}
             />
           )
         ) : (
@@ -285,7 +285,7 @@ export function StudentsList() {
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc', textAlign: 'left', color: '#475569' }}>
                 <th style={{ padding: '10px 12px', fontWeight: 600 }}>Matricule</th>
-                <th style={{ padding: '10px 12px', fontWeight: 600 }}>Élève</th>
+                <th style={{ padding: '10px 12px', fontWeight: 600 }}>Ã‰lÃ¨ve</th>
                 <th style={{ padding: '10px 12px', fontWeight: 600 }}>Sexe</th>
                 <th style={{ padding: '10px 12px', fontWeight: 600 }}>Date de naissance</th>
                 <th style={{ padding: '10px 12px', fontWeight: 600 }}>Lieu de naissance</th>
@@ -298,21 +298,21 @@ export function StudentsList() {
             <tbody>
               {filteredStudents.map((student, i) => (
                 <tr key={student.id} style={{ borderBottom: i < filteredStudents.length - 1 ? '1px solid #f1f5f9' : 'none', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <td style={{ padding: '6px 12px', color: '#64748b', fontWeight: 500 }}>{student.matricule || '—'}</td>
+                  <td style={{ padding: '6px 12px', color: '#64748b', fontWeight: 500 }}>{student.matricule || 'â€”'}</td>
                   <td style={{ padding: '6px 12px' }}>
                     <div style={{ fontWeight: 600, color: '#0f172a' }}>{student.last_name} {student.first_name}</div>
                   </td>
-                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.gender || '—'}</td>
-                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.birth_date ? new Date(student.birth_date).toLocaleDateString('fr-FR') : '—'}</td>
-                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.birth_place || '—'}</td>
-                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.address || '—'}</td>
+                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.gender || 'â€”'}</td>
+                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.birth_date ? new Date(student.birth_date).toLocaleDateString('fr-FR') : 'â€”'}</td>
+                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.birth_place || 'â€”'}</td>
+                  <td style={{ padding: '6px 12px', color: '#64748b' }}>{student.address || 'â€”'}</td>
                   <td style={{ padding: '6px 12px' }}>
                     {student.level_name ? (
                       <span style={{ display: 'inline-flex', padding: '3px 8px', background: '#f0fdf4', color: '#15803d', borderRadius: '9999px', fontSize: '11px', fontWeight: 600 }}>
                         {student.level_name}
                       </span>
                     ) : (
-                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>—</span>
+                      <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>â€”</span>
                     )}
                   </td>
                   <td style={{ padding: '6px 12px' }}>

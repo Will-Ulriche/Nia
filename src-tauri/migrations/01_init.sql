@@ -382,3 +382,10 @@ CREATE TABLE audit_logs (
     updated_by TEXT,
     deleted_at TEXT
 );
+
+-- 24. Table: sync_metadata
+CREATE TABLE sync_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
