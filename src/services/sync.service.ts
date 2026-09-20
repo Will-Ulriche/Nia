@@ -110,6 +110,7 @@ export class SyncService {
     // entièrement re-récupérée au prochain pull (pas de lignes perdues).
     const syncStartedAt = new Date().toISOString();
     let pullHadError = false;
+    const failedTables: string[] = [];
 
     console.log(`[Sync] Pull started. Mode: ${await getLastSyncAt(schoolId) ? `incremental since ${await getLastSyncAt(schoolId)}` : 'full'}`);
 
@@ -127,7 +128,7 @@ export class SyncService {
         }
 
         const { data, error } = await query;
-        if (error) { pullHadError = true; console.warn(`[Sync] Pull error on ${table}:`, error.message); continue; }
+        if (error) { pullHadError = true; failedTables.push(table); console.warn(`[Sync] Pull error on ${table}:`, error.message); continue; }
         if (!data || data.length === 0) {
           // Table en succès mais rien de nouveau : on avance toujours son curseur.
           await setLastSyncAt(schoolId, syncStartedAt, table);
@@ -141,7 +142,7 @@ export class SyncService {
         );
         const tableMutations = pendingMutationsRows.map(m => {
           let payloadObj;
-          try { payloadObj = JSON.parse(m.payload); } catch (e) { payloadObj = {}; }
+          try { payloadObj = JSON.parse(m.payload); } catch { payloadObj = {}; }
           return { ...m, payloadObj };
         });
 
@@ -184,6 +185,7 @@ export class SyncService {
         console.log(`[Sync] Pulled ${data.length} rows for ${table}`);
       } catch (e) {
         pullHadError = true;
+        failedTables.push(table);
         console.error(`[Sync] Error pulling ${table}:`, e);
       }
     }
@@ -195,6 +197,11 @@ export class SyncService {
       await setLastSyncAt(schoolId, syncStartedAt);
     }
     await DeviceService.updateLastSync();
+    if (failedTables.length > 0) {
+      console.warn(
+        `[Sync] Pull finished avec ${failedTables.length} table(s) en échec — curseurs non avancés : ${failedTables.join(', ')}`
+      );
+    }
     console.log('[Sync] Pull complete. last_sync_at set to', syncStartedAt);
   }
 

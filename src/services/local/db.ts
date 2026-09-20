@@ -79,7 +79,15 @@ export async function closeDb(): Promise<void> {
 async function initDb(db: any) {
   const queries = schemaSql.split(';').filter((q: string) => q.trim().length > 0);
   for (const query of queries) {
-    await db.execute(query);
+    try {
+      await db.execute(query);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      // Message exploitable : nomme l'énoncé en échec pour identifier la migration.
+      throw new Error(
+        `Initialisation du schéma local impossible sur l'énoncé « ${query.trim().slice(0, 80)}… » — ${detail}`
+      );
+    }
   }
   if (!ENABLE_REMOTE_SYNC) {
     await db.execute(`DELETE FROM mutations_queue`);
@@ -93,7 +101,7 @@ async function initDb(db: any) {
             localStorage.setItem('nia_local_db', JSON.stringify(parsed));
           }
         }
-      } catch (e) {}
+      } catch {}
     }
   }
   console.log('[Local DB] Schema initialized successfully');
