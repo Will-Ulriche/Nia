@@ -1,4 +1,4 @@
-import { getDb, queueMutation } from './local/db';
+import { getDb, queueMutation, type SqlValue } from './local/db';
 import type { FeeDefinition, Payment, Receipt, Expense } from '../types/database';
 
 const now = () => new Date().toISOString();
@@ -21,7 +21,7 @@ export class FinanceService {
     if (payload.id) {
       const updatedAt = now();
       const sets: string[] = [`updated_at = $1`];
-      const vals: any[] = [updatedAt];
+      const vals: SqlValue[] = [updatedAt];
       let idx = 2;
       if (payload.name !== undefined) { sets.push(`name = $${idx++}`); vals.push(payload.name); }
       if (payload.amount !== undefined) { sets.push(`amount = $${idx++}`); vals.push(payload.amount); }

@@ -1,3 +1,5 @@
+import type { SqlValue } from './sql-types';
+
 /**
  * WebSqlMock : FAUSSE BASE DE DONNÉES POUR LE DÉVELOPPEMENT WEB
  * ⚠️ ATTENTION ⚠️
@@ -75,7 +77,7 @@ export class WebSqlMock {
     }
   }
 
-  async execute(query: string, bindParams: any[] = []): Promise<any> {
+  async execute(query: string, bindParams: SqlValue[] = []): Promise<{ rowsAffected: number }> {
     const q = query.trim();
 
     // CREATE TABLE
@@ -198,7 +200,7 @@ export class WebSqlMock {
     return { rowsAffected: 0 };
   }
 
-  async select<T>(query: string, bindParams: any[] = []): Promise<T> {
+  async select<T>(query: string, bindParams: SqlValue[] = []): Promise<T> {
     const q = query.trim();
 
     const match = q.match(/FROM ([a-zA-Z0-9_]+)/i);

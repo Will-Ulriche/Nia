@@ -1,4 +1,4 @@
-import { getDb, queueMutation } from './local/db';
+import { getDb, queueMutation, type SqlValue } from './local/db';
 import type { Section, Level, Class, Series } from '../types/database';
 
 const now = () => new Date().toISOString();
@@ -101,7 +101,7 @@ export class StructureService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: SqlValue[] = [updatedAt];
     let idx = 2;
     if (payload.name !== undefined) { sets.push(`name = $${idx++}`); vals.push(payload.name); }
     if (payload.level_order !== undefined) { sets.push(`level_order = $${idx++}`); vals.push(payload.level_order); }
@@ -124,7 +124,7 @@ export class StructureService {
     const db = await getDb();
     // SQLite doesn't support JOIN shorthand like Supabase; we fetch classes and join manually or return flat
     let sql = `SELECT c.*, l.name as level_name FROM classes c LEFT JOIN levels l ON c.level_id = l.id WHERE c.school_id = $1 AND c.deleted_at IS NULL`;
-    const params: any[] = [schoolId];
+    const params: SqlValue[] = [schoolId];
     let idx = 2;
     if (academicYearId) { sql += ` AND c.academic_year_id = $${idx++}`; params.push(academicYearId); }
     if (levelId) { sql += ` AND c.level_id = $${idx++}`; params.push(levelId); }
@@ -182,7 +182,7 @@ export class StructureService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: SqlValue[] = [updatedAt];
     let idx = 2;
     if (payload.name !== undefined) { sets.push(`name = $${idx++}`); vals.push(payload.name); }
     if (payload.level_id !== undefined) { sets.push(`level_id = $${idx++}`); vals.push(payload.level_id); }

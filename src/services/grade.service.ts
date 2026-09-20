@@ -1,4 +1,4 @@
-import { getDb, queueMutation } from './local/db';
+import { getDb, queueMutation, type SqlValue } from './local/db';
 import type { Assessment, Grade } from '../types/database';
 import { CalculationService } from './calculation.service';
 
@@ -18,7 +18,7 @@ export class GradeService {
                LEFT JOIN periods p ON a.period_id = p.id
                LEFT JOIN teachers t ON a.teacher_id = t.id
                WHERE a.school_id = $1 AND a.deleted_at IS NULL`;
-    const params: any[] = [schoolId];
+    const params: SqlValue[] = [schoolId];
     let idx = 2;
     if (classId) { sql += ` AND a.class_id = $${idx++}`; params.push(classId); }
     if (periodId) { sql += ` AND a.period_id = $${idx++}`; params.push(periodId); }
@@ -58,11 +58,12 @@ export class GradeService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: (string | number | boolean | null)[] = [updatedAt];
     let idx = 2;
     const fields = ['title','assessment_date','total_score','weight','teacher_id'] as const;
     for (const f of fields) {
-      if ((payload as any)[f] !== undefined) { sets.push(`${f} = $${idx++}`); vals.push((payload as any)[f]); }
+      const value = payload[f];
+      if (value !== undefined) { sets.push(`${f} = $${idx++}`); vals.push(value); }
     }
     vals.push(id);
     await db.execute(`UPDATE assessments SET ${sets.join(', ')} WHERE id = $${idx}`, vals);

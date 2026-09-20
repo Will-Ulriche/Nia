@@ -1,4 +1,4 @@
-import { getDb, ENABLE_REMOTE_SYNC } from './local/db';
+import { getDb, ENABLE_REMOTE_SYNC, type SqlValue } from './local/db';
 import type { AcademicYear, Period } from '../types/database';
 
 export class AcademicService {
@@ -99,7 +99,7 @@ export class AcademicService {
     
     // SQLite doesn't support dynamic updates easily without building string
     let query = 'UPDATE academic_years SET updated_at = $1';
-    const values: any[] = [now];
+    const values: SqlValue[] = [now];
     let idx = 2;
 
     if (payload.name !== undefined) { query += `, name = $${idx++}`; values.push(payload.name); }
@@ -179,7 +179,7 @@ export class AcademicService {
     const now = new Date().toISOString();
     
     let query = 'UPDATE periods SET updated_at = $1';
-    const values: any[] = [now];
+    const values: SqlValue[] = [now];
     let idx = 2;
 
     if (payload.name !== undefined) { query += `, name = $${idx++}`; values.push(payload.name); }

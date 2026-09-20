@@ -1,4 +1,4 @@
-import { getDb, queueMutation } from './local/db';
+import { getDb, queueMutation, type SqlValue } from './local/db';
 import type { Subject, ClassSubject, SubjectTemplate, SubjectTemplateItem } from '../types/database';
 
 const now = () => new Date().toISOString();
@@ -41,7 +41,7 @@ export class SubjectService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: SqlValue[] = [updatedAt];
     let idx = 2;
     
     const fields = ['name', 'code', 'description'];
@@ -118,7 +118,7 @@ export class SubjectService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: SqlValue[] = [updatedAt];
     let idx = 2;
     
     const fields = ['coefficient', 'weekly_hours', 'subject_type', 'is_mandatory', 'is_active', 'teacher_id', 'order_index'];

@@ -1,4 +1,4 @@
-import { getDb, queueMutation } from './local/db';
+import { getDb, queueMutation, type SqlValue } from './local/db';
 import type { Teacher, TeacherAssignment } from '../types/database';
 
 const now = () => new Date().toISOString();
@@ -35,11 +35,12 @@ export class TeacherService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: (string | number | boolean | null)[] = [updatedAt];
     let idx = 2;
     const fields = ['first_name','last_name','contact_phone','contact_email'] as const;
     for (const f of fields) {
-      if ((payload as any)[f] !== undefined) { sets.push(`${f} = $${idx++}`); vals.push((payload as any)[f]); }
+      const value = payload[f];
+      if (value !== undefined) { sets.push(`${f} = $${idx++}`); vals.push(value); }
     }
     vals.push(id);
     await db.execute(`UPDATE teachers SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
@@ -64,7 +65,7 @@ export class TeacherService {
                LEFT JOIN subjects s ON ta.subject_id = s.id
                LEFT JOIN classes c ON ta.class_id = c.id
                WHERE ta.school_id = $1 AND ta.deleted_at IS NULL`;
-    const params: any[] = [schoolId];
+    const params: SqlValue[] = [schoolId];
     let idx = 2;
     if (academicYearId) { sql += ` AND ta.academic_year_id = $${idx++}`; params.push(academicYearId); }
     if (teacherId)      { sql += ` AND ta.teacher_id = $${idx++}`; params.push(teacherId); }

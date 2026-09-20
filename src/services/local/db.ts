@@ -1,12 +1,14 @@
 import Database from '@tauri-apps/plugin-sql';
 import schemaSql from './schema.sql?raw';
 import { WebSqlMock } from './websql-mock';
+import type { SqlValue } from './sql-types';
+export type { SqlValue };
 
 let dbInstance: any = null;
 
 export interface LocalDatabase {
-  execute(query: string, bindValues?: any[]): Promise<any>;
-  select<T>(query: string, bindValues?: any[]): Promise<T>;
+  execute(query: string, bindValues?: SqlValue[]): Promise<{ rowsAffected: number }>;
+  select<T>(query: string, bindValues?: SqlValue[]): Promise<T>;
   close?: () => Promise<void>;
 }
 

@@ -1,4 +1,4 @@
-import { getDb, queueMutation } from './local/db';
+import { getDb, queueMutation, type SqlValue } from './local/db';
 import type { Student, Enrollment } from '../types/database';
 
 const now = () => new Date().toISOString();
@@ -61,11 +61,12 @@ export class StudentService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: (string | number | boolean | null)[] = [updatedAt];
     let idx = 2;
     const fields = ['matricule','first_name','last_name','gender','birth_date','birth_place','address','city','neighborhood','nationality','contact_phone','contact_email','parent_name','parent_contact','parent_city','parent_neighborhood','parent_whatsapp','parent_profession','parent_relation','financial_sponsor','schooling_regime','previous_school','previous_class','previous_year'] as const;
     for (const f of fields) {
-      if ((payload as any)[f] !== undefined) { sets.push(`${f} = $${idx++}`); vals.push((payload as any)[f]); }
+      const value = payload[f];
+      if (value !== undefined) { sets.push(`${f} = $${idx++}`); vals.push(value); }
     }
     vals.push(id);
     await db.execute(`UPDATE students SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
@@ -121,7 +122,7 @@ export class StudentService {
     const db = await getDb();
     const updatedAt = now();
     const sets: string[] = [`updated_at = $1`];
-    const vals: any[] = [updatedAt];
+    const vals: SqlValue[] = [updatedAt];
     let idx = 2;
     if (payload.status !== undefined) { sets.push(`status = $${idx++}`); vals.push(payload.status); }
     if (payload.class_id !== undefined) { sets.push(`class_id = $${idx++}`); vals.push(payload.class_id); }
