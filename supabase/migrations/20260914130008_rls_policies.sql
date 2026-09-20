@@ -453,10 +453,14 @@ CREATE POLICY "rls_grades_write_direction" ON public.grades
   WITH CHECK (public.is_direction(school_id));
 CREATE POLICY "rls_grades_write_professeur" ON public.grades
   FOR ALL USING (
-    public.is_professeur(school_id) AND public.professor_owns_assessment(school_id, assessment_id)
+    public.is_professeur(school_id)
+    AND public.professor_owns_assessment(school_id, assessment_id)
+    AND public.professor_has_student(school_id, student_id)
   )
   WITH CHECK (
-    public.is_professeur(school_id) AND public.professor_owns_assessment(school_id, assessment_id)
+    public.is_professeur(school_id)
+    AND public.professor_owns_assessment(school_id, assessment_id)
+    AND public.professor_has_student(school_id, student_id)
   );
 
 -- attendance (présences) : le professeur gère SES classes uniquement
@@ -472,13 +476,15 @@ CREATE POLICY "rls_attendance_write" ON public.attendance
     public.is_super_admin()
     OR public.is_direction(school_id)
     OR public.is_secretaire(school_id)
-    OR (public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id))
+    OR (public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id)
+        AND public.professor_has_student(school_id, student_id))
   )
   WITH CHECK (
     public.is_super_admin()
     OR public.is_direction(school_id)
     OR public.is_secretaire(school_id)
-    OR (public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id))
+    OR (public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id)
+        AND public.professor_has_student(school_id, student_id))
   );
 
 -- ============================================================================
