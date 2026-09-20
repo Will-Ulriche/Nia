@@ -74,7 +74,7 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
     } catch (e) {
       console.error('[SyncStatusPanel] refresh error:', e);
     }
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     refresh();
