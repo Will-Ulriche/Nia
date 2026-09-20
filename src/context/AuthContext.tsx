@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 import { AuthService } from '../services/auth.service';
@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [originalProfile, setOriginalProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const previousUserIdRef = useRef<string | null>(null);
 
   const impersonateUser = (targetProfile: Profile) => {
     // Garde : seule l'identité réelle d'un super admin peut impersonifier,
@@ -62,19 +63,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    // Applique une session en ne rechargeant le profil RÉEL que sur un vrai
+    // changement d'identité (connexion / premier chargement). Un simple refresh
+    // de token ne doit PAS écraser un mode impersonation en cours, et une
+    // nouvelle connexion doit toujours purger un éventuel originalProfile résiduel.
+    async function applySession(newSession: Session | null) {
+      const nextUserId = newSession?.user?.id ?? null;
+      const userChanged = previousUserIdRef.current !== nextUserId;
+
+      if (!newSession?.user) {
+        previousUserIdRef.current = null;
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setOriginalProfile(null);
+        }
+        return;
+      }
+
+      if (userChanged) {
+        const userProfile = await AuthService.getCurrentProfile();
+        if (!mounted) return;
+        setProfile(userProfile);
+        setOriginalProfile(null);
+
+        // Log de connexion (uniquement au vrai changement, pas au refresh)
+        AuditService.logAction({
+          schoolId: userProfile?.school_id ?? null,
+          userId: newSession.user.id,
+          action: 'LOGIN',
+          details: { method: 'email' }
+        });
+      }
+
+      if (mounted) {
+        setSession(newSession);
+        setUser(newSession.user ?? null);
+      }
+      previousUserIdRef.current = nextUserId;
+    }
+
     async function fetchSession() {
       try {
         const currentSession = await AuthService.getSession();
         if (mounted) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          if (currentSession?.user) {
-            const userProfile = await AuthService.getCurrentProfile();
-            setProfile(userProfile);
-          } else {
-            setProfile(null);
-          }
+          await applySession(currentSession);
         }
       } catch (err) {
         console.error('Failed to load session', err);
@@ -90,27 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         if (mounted) {
-          const previousSession = session;
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          
-          if (newSession?.user) {
-            const userProfile = await AuthService.getCurrentProfile();
-            setProfile(userProfile);
-            
-            // Log de connexion (seulement si ce n'est pas juste un refresh de token)
-            if (!previousSession?.user || previousSession.user.id !== newSession.user.id) {
-               AuditService.logAction({
-                 schoolId: userProfile?.school_id ?? null,
-                 userId: newSession.user.id,
-                 action: 'LOGIN',
-                 details: { method: 'email' }
-               });
-            }
-          } else {
-            setProfile(null);
-          }
-          setIsLoading(false);
+          await applySession(newSession);
         }
       }
     );
@@ -130,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     }
     await supabase.auth.signOut();
+    setOriginalProfile(null);
   };
 
   return (
