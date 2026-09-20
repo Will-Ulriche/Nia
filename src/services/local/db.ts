@@ -344,8 +344,35 @@ async function initDb(db: any) {
 // TOGGLE SYNCHRONISATION SUPABASE (mettez à true pour réactiver la synchro Supabase à la fin)
 export const ENABLE_REMOTE_SYNC = true;
 
-export async function queueMutation(tableName: string, operation: 'INSERT' | 'UPDATE' | 'DELETE', payload: Record<string, any>) {
-  if (!ENABLE_REMOTE_SYNC) return;
+export type QueueMutationResult =
+  | { ok: true }
+  | { ok: false; errorType: 'blocking' | 'temporary'; message: string };
+
+export interface QueueFailure {
+  at: string;
+  table: string;
+  operation: string;
+  errorType: 'blocking' | 'temporary';
+  message: string;
+}
+
+let lastQueueFailure: QueueFailure | null = null;
+
+/**
+ * Retourne la dernière mutation qui n'a PAS pu être enregistrée dans la file
+ * (affichée à l'utilisateur). null si aucune échec depuis le dernier
+ * clearLastQueueFailure().
+ */
+export function getLastQueueFailure(): QueueFailure | null {
+  return lastQueueFailure;
+}
+
+export function clearLastQueueFailure(): void {
+  lastQueueFailure = null;
+}
+
+export async function queueMutation(tableName: string, operation: 'INSERT' | 'UPDATE' | 'DELETE', payload: Record<string, any>): Promise<QueueMutationResult> {
+  if (!ENABLE_REMOTE_SYNC) return { ok: true };
 
   try {
     const db = await getDb();
@@ -355,7 +382,14 @@ export async function queueMutation(tableName: string, operation: 'INSERT' | 'UP
       `INSERT INTO mutations_queue (id, table_name, operation, payload, created_at, status) VALUES ($1, $2, $3, $4, $5, 'pending')`,
       [id, tableName, operation, JSON.stringify(payload), now]
     );
+    return { ok: true };
   } catch (e) {
-    console.warn('[queueMutation] Error:', e);
+    const message = e instanceof Error ? e.message : String(e);
+    // 'blocking' = base locale inaccessible (SQLite en échec) ; sinon 'temporary'.
+    const errorType: 'blocking' | 'temporary' = getStorageEngine() === 'none' ? 'blocking' : 'temporary';
+    lastQueueFailure = { at: new Date().toISOString(), table: tableName, operation, errorType, message };
+    // Log structuré sans le payload (pas d'exposition de données sensibles).
+    console.error(`[queueMutation] FAILED table=${tableName} operation=${operation} type=${errorType} message=${message}`);
+    return { ok: false, errorType, message };
   }
 }
