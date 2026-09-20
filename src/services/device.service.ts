@@ -145,9 +145,9 @@ export class DeviceService {
     if (error) throw error;
   }
   
-  static async assignToSchool(deviceId: string, schoolId: string | null): Promise<void> {
+  static async assignToSchool(deviceId: string, schoolId: string): Promise<void> {
       const { error } = await supabase
-        .from('devices')
+        .from('school_devices')
         .update({ school_id: schoolId })
         .eq('id', deviceId);
       if (error) throw error;
