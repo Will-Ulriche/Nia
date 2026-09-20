@@ -150,8 +150,11 @@ $$;
 
 -- ============================================================================
 -- SECURITE PROFILES : anti-escalade de privilèges
--- Un utilisateur ne peut PAS changer son propre rôle ni son école.
--- Seuls le super_admin ou la direction de l'école peuvent le faire.
+-- Un utilisateur ne peut PAS changer son propre rôle ni son école,
+-- quels que soient son rôle (y compris une direction) et sa nouvelle école.
+-- Seuls le super_admin peuvent le faire (sur eux-mêmes comme sur les autres) ;
+-- la direction gère les rôles/écoles des AUTRES membres via la politique
+-- rls_profiles_direction_update.
 -- (Sans ce garde-fou, « Users can update own profile » permettrait à un
 --  professeur de se passer le rôle 'direction'.)
 -- En outre, AUCUN utilisateur non super_admin ne peut créer ou promouvoir un
@@ -169,13 +172,12 @@ BEGIN
     RAISE EXCEPTION 'Seul un super admin peut promouvoir un super admin.';
   END IF;
 
-  -- Unicité du cas « l'utilisateur se modifie lui-même »
+  -- Unicité du cas « l'utilisateur se modifie lui-même » : aucun changement de
+  -- rôle ou d'école sur son propre profil, même pour une direction.
   IF NEW.id = auth.uid() AND NOT public.is_super_admin() THEN
-    IF NOT public.is_direction(OLD.school_id) AND NOT public.is_direction(NEW.school_id) THEN
-      IF NEW.role IS DISTINCT FROM OLD.role
-         OR NEW.school_id IS DISTINCT FROM OLD.school_id THEN
-        RAISE EXCEPTION 'Un utilisateur ne peut pas modifier son propre rôle ni son établissement.';
-      END IF;
+    IF NEW.role IS DISTINCT FROM OLD.role
+       OR NEW.school_id IS DISTINCT FROM OLD.school_id THEN
+      RAISE EXCEPTION 'Un utilisateur ne peut pas modifier son propre rôle ni son établissement.';
     END IF;
   END IF;
   RETURN NEW;
