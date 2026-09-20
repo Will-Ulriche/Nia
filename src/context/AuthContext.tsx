@@ -26,17 +26,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const impersonateUser = (targetProfile: Profile) => {
-    if (!originalProfile && profile) {
-      setOriginalProfile(profile);
-    }
+    // Garde : seule l'identité réelle d'un super admin peut impersonifier,
+    // et on interdit l'impersonation en cascade.
+    if (profile?.role !== 'super_admin' || originalProfile) return;
+
+    AuditService.logAction({
+      schoolId: targetProfile.school_id ?? null,
+      userId: session?.user?.id,
+      action: 'IMPERSONATE_START',
+      entityType: 'profiles',
+      entityId: targetProfile.id,
+      details: { targetUserId: targetProfile.id, targetRole: targetProfile.role },
+    });
+
+    setOriginalProfile(profile);
     setProfile(targetProfile);
   };
 
   const stopImpersonating = () => {
-    if (originalProfile) {
-      setProfile(originalProfile);
-      setOriginalProfile(null);
-    }
+    if (!originalProfile) return;
+
+    AuditService.logAction({
+      schoolId: profile?.school_id ?? null,
+      userId: session?.user?.id,
+      action: 'IMPERSONATE_STOP',
+      entityType: 'profiles',
+      entityId: profile?.id,
+      details: { restoredProfileId: originalProfile.id },
+    });
+
+    setProfile(originalProfile);
+    setOriginalProfile(null);
   };
 
   useEffect(() => {

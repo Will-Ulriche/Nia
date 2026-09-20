@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { session, isLoading, originalProfile } = useAuth();
+  const { session, isLoading } = useAuth();
   const { role } = useRole();
 
   if (isLoading) {
@@ -18,11 +18,6 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   // Non connecté
   if (!session) {
     return <Navigate to="/login" replace />;
-  }
-
-  // En mode impersonation (Super Admin naviguant en tant qu'un autre utilisateur) : accès libre
-  if (originalProfile?.role === 'super_admin') {
-    return <Outlet />;
   }
 
   // Vérification des rôles si spécifié
