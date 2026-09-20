@@ -612,6 +612,24 @@ Dans l'environnement local du projet :
 - Ne pas remplacer TypeScript par JavaScript.
 - Ne pas désactiver le typecheck pour faire passer le build.
 
+### Résultat de l'exécution (P2-01)
+
+Vérifications effectuées en environnement local, tout est vert :
+
+1. `npm ci --dry-run` : lockfile cohérent, aucune altération.
+2. `npm run build` (`tsc -b && vite build`) : OK (667ms).
+3. `npx tsc --noEmit` : OK (aucune erreur).
+4. `npm run lint` (oxlint) : OK — warnings pré-existants uniquement
+   (`SyncStatusPanel.tsx:80`, `db.ts:338`, `sync.service.ts`).
+5. `npm test` (vitest) : OK — 6/6 (isolation multi-établissements WebSqlMock).
+6. `cargo check` (src-tauri) : OK — `Finished dev profile ... in 4m27s` (Rust 1.98.1).
+
+La cause des erreurs initiales (`Cannot find type definition file for 'vite/client'`,
+`'node'`) était propre à l'environnement d'analyse : inclus `@types/node` et
+`vite/client` gérés via `tsconfig.app.json`/`tsconfig.node.json`, pas de montée
+de version de dépendances nécessaire (seule addition : `vitest` en devDependency
+pour P2-03).
+
 ---
 
 ## P2-02 — Version de l'application codée en dur
