@@ -300,14 +300,16 @@ async function initDb(db: any) {
   }
   if (!ENABLE_REMOTE_SYNC) {
     await db.execute(`DELETE FROM mutations_queue`);
-    try {
-      const raw = localStorage.getItem('nia_local_db');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        parsed.mutations_queue = [];
-        localStorage.setItem('nia_local_db', JSON.stringify(parsed));
-      }
-    } catch (e) {}
+    if (currentEngine === 'websql-mock') {
+      try {
+        const raw = localStorage.getItem('nia_local_db');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          parsed.mutations_queue = [];
+          localStorage.setItem('nia_local_db', JSON.stringify(parsed));
+        }
+      } catch (e) {}
+    }
   }
   console.log('[Local DB] Schema initialized successfully');
 }
