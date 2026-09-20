@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { getDb } from './local/db';
+import { APP_VERSION } from '../utils/version';
 
 export interface Device {
   id: string;
@@ -57,7 +58,7 @@ export class DeviceService {
         id: deviceId,
         school_id: schoolId,
         device_name: name,
-        app_version: '1.0.0', // TODO: Get from env or package.json
+        app_version: APP_VERSION,
         last_sync_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
