@@ -229,18 +229,53 @@ export interface LocalDatabase {
   close?: () => Promise<void>;
 }
 
+export type StorageEngine = 'sqlite' | 'websql-mock' | 'none';
+
+let currentEngine: StorageEngine = 'none';
+
+/**
+ * Indicateur du moteur de stockage réellement utilisé.
+ * - 'sqlite' : base locale Tauri (production).
+ * - 'websql-mock' : fausse base LocalStorage, uniquement en développement navigateur.
+ * - 'none' : aucun moteur disponible (erreur bloquante Tauri).
+ */
+export function getStorageEngine(): StorageEngine {
+  return currentEngine;
+}
+
+function isTauriEnvironment(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
 export async function getDb(): Promise<LocalDatabase> {
-  if (!dbInstance) {
-    try {
-      dbInstance = await Database.load('sqlite:nia.db');
-      await initDb(dbInstance);
-    } catch (e) {
-      console.warn('[Local DB] Tauri SQL plugin not available. Switching to Web LocalStorage DB fallback.', e);
-      dbInstance = new WebSqlMock();
-      await initDb(dbInstance);
-    }
+  if (dbInstance) return dbInstance as LocalDatabase;
+
+  // Mode navigateur de développement : WebSqlMock est la SEULE base utilisée,
+  // explicitement séparé de l'environnement Tauri.
+  if (!isTauriEnvironment()) {
+    currentEngine = 'websql-mock';
+    dbInstance = new WebSqlMock();
+    await initDb(dbInstance);
+    console.warn('[Local DB] Engine: websql-mock (mode navigateur de développement).');
+    return dbInstance as LocalDatabase;
   }
-  return dbInstance as LocalDatabase;
+
+  // Environnement Tauri : SQLite uniquement. Toute erreur (chargement OU schéma)
+  // est bloquante et explicite — aucun basculement silencieux vers LocalStorage.
+  try {
+    dbInstance = await Database.load('sqlite:nia.db');
+    await initDb(dbInstance);
+    currentEngine = 'sqlite';
+    return dbInstance as LocalDatabase;
+  } catch (e) {
+    currentEngine = 'none';
+    console.error('[Local DB] CRITIQUE : échec de chargement SQLite en environnement Tauri.', e);
+    const detail = e instanceof Error ? e.message : String(e);
+    throw new Error(
+      'Base de données locale inaccessible (SQLite). Aucune écriture n\'a été effectuée. ' +
+      `Vérifiez le fichier nia.db et les migrations. Détail : ${detail}`
+    );
+  }
 }
 
 export async function closeDb(): Promise<void> {
@@ -253,31 +288,28 @@ export async function closeDb(): Promise<void> {
       console.warn('[Local DB] Error closing DB:', e);
     } finally {
       dbInstance = null;
+      currentEngine = 'none';
     }
   }
 }
 
 async function initDb(db: any) {
-  try {
-    const queries = schemaSql.split(';').filter((q: string) => q.trim().length > 0);
-    for (const query of queries) {
-      await db.execute(query);
-    }
-    if (!ENABLE_REMOTE_SYNC) {
-      await db.execute(`DELETE FROM mutations_queue`);
-      try {
-        const raw = localStorage.getItem('nia_local_db');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          parsed.mutations_queue = [];
-          localStorage.setItem('nia_local_db', JSON.stringify(parsed));
-        }
-      } catch (e) {}
-    }
-    console.log('[Local DB] Schema initialized successfully');
-  } catch (error) {
-    console.error('[Local DB] Failed to initialize schema', error);
+  const queries = schemaSql.split(';').filter((q: string) => q.trim().length > 0);
+  for (const query of queries) {
+    await db.execute(query);
   }
+  if (!ENABLE_REMOTE_SYNC) {
+    await db.execute(`DELETE FROM mutations_queue`);
+    try {
+      const raw = localStorage.getItem('nia_local_db');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.mutations_queue = [];
+        localStorage.setItem('nia_local_db', JSON.stringify(parsed));
+      }
+    } catch (e) {}
+  }
+  console.log('[Local DB] Schema initialized successfully');
 }
 
 // TOGGLE SYNCHRONISATION SUPABASE (mettez à true pour réactiver la synchro Supabase à la fin)
