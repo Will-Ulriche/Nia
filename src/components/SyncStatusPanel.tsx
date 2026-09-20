@@ -17,11 +17,13 @@ interface SyncStatusPanelProps {
   onSyncComplete?: () => void;
 }
 
-async function getLastSyncAt(): Promise<string | null> {
+async function getLastSyncAt(schoolId?: string | null): Promise<string | null> {
   try {
     const db = await getDb();
+    const key = schoolId ? `last_sync_at_${schoolId}` : 'last_sync_at';
     const rows = await db.select<{ value: string }[]>(
-      `SELECT value FROM sync_metadata WHERE key = 'last_sync_at'`
+      `SELECT value FROM sync_metadata WHERE key = $1`,
+      [key]
     );
     return rows.length ? rows[0].value : null;
   } catch {
@@ -60,7 +62,7 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
         SyncService.getPendingMutationCount(),
         SyncService.getDeadMutations(),
         ConflictService.getPendingConflictCount(),
-        getLastSyncAt(),
+        getLastSyncAt(schoolId),
       ]);
       setStats(s => ({
         ...s,
