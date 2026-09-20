@@ -60,7 +60,7 @@ export function LicenseLockScreen({ children }: { children: React.ReactNode }) {
           {licenseState?.message || "La licence de cet établissement a expiré ou est invalide."}
         </p>
         <p style={{ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '2rem' }}>
-          L'accès à Kamitia a été suspendu pour cet établissement. Veuillez contacter le support technique ou le super administrateur pour régulariser votre situation.
+          L'accès à Nia a été suspendu pour cet établissement. Veuillez contacter le support technique ou le super administrateur pour régulariser votre situation.
         </p>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

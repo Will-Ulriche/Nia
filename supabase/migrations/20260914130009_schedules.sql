@@ -32,42 +32,14 @@ CREATE TABLE public.schedules (
 -- Enable RLS
 ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
 
--- Policies
-CREATE POLICY "Schedules are viewable by everyone in the school"
-    ON public.schedules FOR SELECT
-    USING (school_id IN (
-        SELECT school_id FROM profiles WHERE id = auth.uid()
-    ));
+-- Modèle de rôle (cf. 20260914130008_rls_policies.sql) :
+--   - Lecture  : tous les membres de l'établissement (emploi du temps partagé)
+--   - Écriture : direction (ou super admin) uniquement
+-- Aucune politique générique d'écriture : un professeur peut consulter
+-- l'emploi du temps mais ne peut ni créér/modifier/supprimer un créneau.
+CREATE POLICY "rls_schedules_read_member" ON public.schedules
+    FOR SELECT USING (public.is_school_member(school_id) OR public.is_super_admin());
 
-CREATE POLICY "Schedules are insertable by Direction/SuperAdmin"
-    ON public.schedules FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.school_id = schedules.school_id
-            AND profiles.role IN ('super_admin', 'direction')
-        )
-    );
-
-CREATE POLICY "Schedules are updatable by Direction/SuperAdmin"
-    ON public.schedules FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.school_id = schedules.school_id
-            AND profiles.role IN ('super_admin', 'direction')
-        )
-    );
-
-CREATE POLICY "Schedules are deletable by Direction/SuperAdmin"
-    ON public.schedules FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.school_id = schedules.school_id
-            AND profiles.role IN ('super_admin', 'direction')
-        )
-    );
+CREATE POLICY "rls_schedules_write_direction" ON public.schedules
+    FOR ALL USING (public.is_direction(school_id))
+    WITH CHECK (public.is_direction(school_id));

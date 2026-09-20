@@ -26,7 +26,7 @@ class WebSqlMock {
 
   private initFromLocalStorage() {
     try {
-      const raw = localStorage.getItem('kamitia_local_db');
+      const raw = localStorage.getItem('nia_local_db');
       if (raw) {
         const parsed = JSON.parse(raw);
         for (const [key, val] of Object.entries(parsed)) {
@@ -44,7 +44,7 @@ class WebSqlMock {
       this.store.forEach((val, key) => {
         obj[key] = val;
       });
-      localStorage.setItem('kamitia_local_db', JSON.stringify(obj));
+      localStorage.setItem('nia_local_db', JSON.stringify(obj));
     } catch (e) {
       console.warn('[WebSqlMock] Error saving to localStorage:', e);
     }
@@ -232,7 +232,7 @@ export interface LocalDatabase {
 export async function getDb(): Promise<LocalDatabase> {
   if (!dbInstance) {
     try {
-      dbInstance = await Database.load('sqlite:kamitia.db');
+      dbInstance = await Database.load('sqlite:nia.db');
       await initDb(dbInstance);
     } catch (e) {
       console.warn('[Local DB] Tauri SQL plugin not available. Switching to Web LocalStorage DB fallback.', e);
@@ -266,11 +266,11 @@ async function initDb(db: any) {
     if (!ENABLE_REMOTE_SYNC) {
       await db.execute(`DELETE FROM mutations_queue`);
       try {
-        const raw = localStorage.getItem('kamitia_local_db');
+        const raw = localStorage.getItem('nia_local_db');
         if (raw) {
           const parsed = JSON.parse(raw);
           parsed.mutations_queue = [];
-          localStorage.setItem('kamitia_local_db', JSON.stringify(parsed));
+          localStorage.setItem('nia_local_db', JSON.stringify(parsed));
         }
       } catch (e) {}
     }

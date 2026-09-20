@@ -28,34 +28,31 @@ CREATE INDEX idx_backups_created_at ON public.backups(created_at);
 -- ==============================
 ALTER TABLE public.backups ENABLE ROW LEVEL SECURITY;
 
--- Direction et super_admin peuvent consulter les sauvegardes de leur école
-CREATE POLICY "Users can view their school's backups"
-ON public.backups FOR SELECT
-USING (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = backups.school_id AND role IN ('direction', 'secretaire'))
-    OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
+-- Modèle de rôle (cf. 20260914130008_rls_policies.sql) :
+--   - Lecture/INSERT : direction et secrétaire (ou super admin)
+--   - UPDATE/DELETE  : direction (ou super admin)
+-- Note : anciennes politiques basées sur une table `user_roles` inexistante
+-- (le rôle vit dans public.profiles) — corrompues et non appliquées.
+CREATE POLICY "rls_backups_read_direction_secretaire" ON public.backups
+FOR SELECT USING (
+    public.is_super_admin()
+    OR public.is_direction(school_id)
+    OR public.is_secretaire(school_id)
 );
 
--- Direction et super_admin peuvent créer des sauvegardes
-CREATE POLICY "Users can insert backups for their school"
-ON public.backups FOR INSERT
-WITH CHECK (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = backups.school_id)
-    OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
+CREATE POLICY "rls_backups_insert_direction_secretaire" ON public.backups
+FOR INSERT WITH CHECK (
+    public.is_super_admin()
+    OR public.is_direction(school_id)
+    OR public.is_secretaire(school_id)
 );
 
--- Direction et super_admin peuvent mettre à jour les métadonnées
-CREATE POLICY "Users can update their school's backups"
-ON public.backups FOR UPDATE
-USING (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = backups.school_id AND role IN ('direction'))
-    OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
+CREATE POLICY "rls_backups_update_direction" ON public.backups
+FOR UPDATE USING (
+    public.is_super_admin() OR public.is_direction(school_id)
 );
 
--- Direction et super_admin peuvent supprimer des sauvegardes
-CREATE POLICY "Users can delete their school's backups"
-ON public.backups FOR DELETE
-USING (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = backups.school_id AND role IN ('direction'))
-    OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
+CREATE POLICY "rls_backups_delete_direction" ON public.backups
+FOR DELETE USING (
+    public.is_super_admin() OR public.is_direction(school_id)
 );

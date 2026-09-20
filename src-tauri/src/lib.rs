@@ -12,7 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:kamitia.db", migrations)
+                .add_migrations("sqlite:nia.db", migrations)
                 .build(),
         )
         .setup(|app| {

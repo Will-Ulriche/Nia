@@ -5,7 +5,7 @@ import { SyncService } from './sync.service';
 import { closeDb } from './local/db';
 
 export class BackupService {
-  private static readonly DB_FILENAME = 'kamitia.db';
+  private static readonly DB_FILENAME = 'nia.db';
 
   /**
    * Retourne le chemin absolu vers le fichier de base de données SQLite local.
@@ -27,9 +27,9 @@ export class BackupService {
         return false;
       }
 
-      const defaultName = `kamitia_backup_${new Date().toISOString().split('T')[0]}.db`;
+      const defaultName = `nia_backup_${new Date().toISOString().split('T')[0]}.db`;
       const savePath = await save({
-        filters: [{ name: 'Base de données Kamitia', extensions: ['db', 'sqlite'] }],
+        filters: [{ name: 'Base de données Nia', extensions: ['db', 'sqlite'] }],
         defaultPath: defaultName,
         title: 'Sauvegarder la base de données'
       });
@@ -65,7 +65,7 @@ export class BackupService {
         await mkdir(backupDir, { recursive: true });
       }
 
-      const filename = `kamitia_autobackup_${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
+      const filename = `nia_autobackup_${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
       const targetPath = await join(backupDir, filename);
 
       // Close DB before copying to ensure integrity (especially on app close)
@@ -84,7 +84,7 @@ export class BackupService {
     try {
       const selected = await open({
         multiple: false,
-        filters: [{ name: 'Base de données Kamitia', extensions: ['db', 'sqlite'] }],
+        filters: [{ name: 'Base de données Nia', extensions: ['db', 'sqlite'] }],
         title: 'Choisir le fichier de sauvegarde'
       });
 

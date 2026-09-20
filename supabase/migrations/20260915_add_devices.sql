@@ -15,17 +15,20 @@ CREATE TABLE IF NOT EXISTS public.devices (
 -- RLS
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
 
--- Les utilisateurs peuvent voir les appareils de leur école
-CREATE POLICY "Users can view their school's devices" 
-ON public.devices FOR SELECT 
-USING (auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = devices.school_id) OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin'));
+-- Modèle de rôle (cf. 20260914130008_rls_policies.sql) :
+--   - Lecture/INSERT : tous les membres de l'établissement
+--   - UPDATE/DELETE  : direction (ou super admin) uniquement
+-- Note : les anciennes politiques référençaient une table `user_roles` qui
+-- n'existe nulle part (le rôle vit dans public.profiles). Elles faisaient
+-- échouer cette migration en production. Corrigé ici.
+CREATE POLICY "rls_devices_read_member" ON public.devices
+FOR SELECT USING (public.is_school_member(school_id) OR public.is_super_admin());
 
--- Les utilisateurs peuvent enregistrer leur appareil
-CREATE POLICY "Users can insert devices" 
-ON public.devices FOR INSERT 
-WITH CHECK (auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = devices.school_id) OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin'));
+CREATE POLICY "rls_devices_insert_member" ON public.devices
+FOR INSERT WITH CHECK (public.is_school_member(school_id) OR public.is_super_admin());
 
--- Les utilisateurs peuvent mettre à jour leur appareil (heartbeat, sync)
-CREATE POLICY "Users can update their school's devices" 
-ON public.devices FOR UPDATE 
-USING (auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = devices.school_id) OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin'));
+CREATE POLICY "rls_devices_update_direction" ON public.devices
+FOR UPDATE USING (public.is_direction(school_id) OR public.is_super_admin());
+
+CREATE POLICY "rls_devices_delete_admin" ON public.devices
+FOR DELETE USING (public.is_super_admin());

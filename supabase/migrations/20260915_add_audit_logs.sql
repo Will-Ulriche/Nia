@@ -22,12 +22,8 @@ CREATE INDEX idx_audit_logs_created_at ON public.audit_logs(created_at);
 -- RLS
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
--- Seule la direction et le super_admin peuvent lire les logs
-CREATE POLICY "Direction can view their school's audit logs" 
-ON public.audit_logs FOR SELECT 
-USING (auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = audit_logs.school_id AND role IN ('direction', 'super_admin')));
-
--- Tous les utilisateurs (authentifiés) peuvent insérer des logs pour leur école
-CREATE POLICY "Users can insert audit logs" 
-ON public.audit_logs FOR INSERT 
-WITH CHECK (auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = audit_logs.school_id) OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin'));
+-- Les politiques de `audit_logs` sont définies dans 20260914130008_rls_policies.sql
+-- (lecture direction/super admin, insertion par tout membre, aucune mise à jour
+-- ni suppression : logs immuables).
+-- Les anciennes politiques de ce fichier référençaient une table `user_roles`
+-- inexistante et faisaient échouer la migration ; elles ne sont pas reproduites.

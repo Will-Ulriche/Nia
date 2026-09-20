@@ -109,7 +109,7 @@ export function BackupPage() {
             </div>
           </div>
           <p style={{ fontSize: '0.95rem', color: '#555', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-            Vérifiez que toutes vos données locales ont bien été transmises au serveur central Kamitia.
+            Vérifiez que toutes vos données locales ont bien été transmises au serveur central Nia.
           </p>
 
           <div style={{ 

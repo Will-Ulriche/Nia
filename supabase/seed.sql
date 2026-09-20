@@ -17,7 +17,7 @@ INSERT INTO auth.users (
     '11111111-1111-1111-1111-111111111111',
     'authenticated',
     'authenticated',
-    'admin@kemitia.local',
+    'admin@nia.local',
     crypt('password123', gen_salt('bf')),
     NOW(),
     NOW(),

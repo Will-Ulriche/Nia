@@ -21,3 +21,26 @@ CREATE TABLE public.expenses (
 );
 
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+
+-- Modèle de rôle (cf. 20260914130008_rls_policies.sql) :
+-- Les dépenses font partie de la caisse/comptabilité : seules la direction
+-- et la secrétaire y accèdent (lecture + écriture). Un professeur n'a aucune
+-- visibilité sur la finance.
+CREATE POLICY "rls_expenses_read_staff" ON public.expenses
+    FOR SELECT USING (
+        public.is_super_admin()
+        OR public.is_direction(school_id)
+        OR public.is_secretaire(school_id)
+    );
+
+CREATE POLICY "rls_expenses_write_staff" ON public.expenses
+    FOR ALL USING (
+        public.is_super_admin()
+        OR public.is_direction(school_id)
+        OR public.is_secretaire(school_id)
+    )
+    WITH CHECK (
+        public.is_super_admin()
+        OR public.is_direction(school_id)
+        OR public.is_secretaire(school_id)
+    );

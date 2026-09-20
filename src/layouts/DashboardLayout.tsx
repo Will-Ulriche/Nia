@@ -112,7 +112,7 @@ export function DashboardLayout() {
             <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
               <i className="ti ti-school" aria-hidden="true"></i>
             </div>
-            <span style={{ fontSize: '20px', fontWeight: 700, color: '#1e3a5f', letterSpacing: '-0.5px' }}>Kamitia</span>
+            <span style={{ fontSize: '20px', fontWeight: 700, color: '#1e3a5f', letterSpacing: '-0.5px' }}>Nia</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', background: isImpersonating ? 'rgba(124, 58, 237, 0.08)' : 'rgba(59, 130, 246, 0.06)', marginBottom: '20px', border: isImpersonating ? '1px solid rgba(124, 58, 237, 0.2)' : '1px solid rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>

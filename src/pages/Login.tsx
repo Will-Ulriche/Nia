@@ -50,9 +50,9 @@ export function Login() {
         {/* Left Section - Form */}
         <div className="login-form-section">
           <div className="login-brand">
-            <img src={appLogo} alt="Kamitia" className="login-logo" />
+            <img src={appLogo} alt="Nia" className="login-logo" />
             <div className="login-brand-text">
-              <h1 className="login-title">Kamitia</h1>
+              <h1 className="login-title">Nia</h1>
               <p className="login-subtitle">Gestion scolaire intelligente</p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function Login() {
           </form>
 
           <p className="login-footer">
-            © {new Date().getFullYear()} Kamitia — Tous droits réservés
+            © {new Date().getFullYear()} Nia — Tous droits réservés
           </p>
         </div>
 

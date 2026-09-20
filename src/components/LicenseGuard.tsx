@@ -96,7 +96,7 @@ export function LicenseGuard() {
         <h1 style={{ margin: '0 0 0.5rem', fontSize: '1.5rem', color: meta.color }}>{meta.title}</h1>
 
         <p style={{ color: '#666', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-          {state?.message || 'Pour utiliser Kamitia, cet établissement doit disposer d\'une licence active.'}
+          {state?.message || 'Pour utiliser Nia, cet établissement doit disposer d\'une licence active.'}
         </p>
 
         {state?.offline && (
@@ -142,7 +142,7 @@ export function LicenseGuard() {
                 transition: 'background 0.2s'
               }}
             >
-              {activating ? 'Validation en cours...' : 'Activer Kamitia'}
+              {activating ? 'Validation en cours...' : 'Activer Nia'}
             </button>
           </>
         ) : (
@@ -160,7 +160,7 @@ export function LicenseGuard() {
         )}
 
         <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '1.25rem', lineHeight: 1.5 }}>
-          En cas de difficulté, contactez le super administrateur de votre plateforme Kamitia.
+          En cas de difficulté, contactez le super administrateur de votre plateforme Nia.
         </p>
       </div>
     </div>

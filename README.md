@@ -1,6 +1,6 @@
-# Kemitia - Logiciel de Gestion Scolaire
+# Nia - Logiciel de Gestion Scolaire
 
-Bienvenue dans le dépôt du logiciel Kemitia. Ce logiciel est conçu comme un produit professionnel, sécurisé et multi-établissements (Collège, Lycée, etc.) fonctionnant en mode Offline-First (SQLite + Supabase Sync) grâce à Tauri.
+Bienvenue dans le dépôt du logiciel Nia. Ce logiciel est conçu comme un produit professionnel, sécurisé et multi-établissements (Collège, Lycée, etc.) fonctionnant en mode Offline-First (SQLite + Supabase Sync) grâce à Tauri.
 
 ## Prérequis
 - [Node.js](https://nodejs.org/)

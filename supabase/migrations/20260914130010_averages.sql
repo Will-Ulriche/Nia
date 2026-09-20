@@ -28,41 +28,28 @@ CREATE TABLE public.averages (
 -- Enable RLS
 ALTER TABLE public.averages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Averages viewable by school members"
-    ON public.averages FOR SELECT
-    USING (school_id IN (
-        SELECT school_id FROM profiles WHERE id = auth.uid()
-    ));
+-- Modèle de rôle (cf. 20260914130008_rls_policies.sql) :
+--   - Lecture  : direction, secrétaire, et professeur (sur SES classes)
+--   - Écriture : direction, et professeur (sur SES classes)
+-- Un professeur déclenche le recalcul des moyennes à la saisie d'une note
+-- (CalculationService) : il doit donc pouvoir insérer/mettre à jour les
+-- moyennes des élèves de ses classes. Rien au-delà.
+CREATE POLICY "rls_averages_read" ON public.averages
+    FOR SELECT USING (
+        public.is_super_admin()
+        OR public.is_direction(school_id)
+        OR public.is_secretaire(school_id)
+        OR (public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id))
+    );
 
-CREATE POLICY "Averages insertable by Direction"
-    ON public.averages FOR INSERT
+CREATE POLICY "rls_averages_write_direction" ON public.averages
+    FOR ALL USING (public.is_direction(school_id))
+    WITH CHECK (public.is_direction(school_id));
+
+CREATE POLICY "rls_averages_write_professeur" ON public.averages
+    FOR ALL USING (
+        public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id)
+    )
     WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.school_id = averages.school_id
-            AND profiles.role IN ('super_admin', 'direction')
-        )
-    );
-
-CREATE POLICY "Averages updatable by Direction"
-    ON public.averages FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.school_id = averages.school_id
-            AND profiles.role IN ('super_admin', 'direction')
-        )
-    );
-
-CREATE POLICY "Averages deletable by Direction"
-    ON public.averages FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.school_id = averages.school_id
-            AND profiles.role IN ('super_admin', 'direction')
-        )
+        public.is_professeur(school_id) AND public.professor_teaches_class(school_id, class_id)
     );

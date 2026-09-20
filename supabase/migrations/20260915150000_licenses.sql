@@ -28,30 +28,16 @@ CREATE INDEX idx_licenses_key ON public.licenses(license_key);
 -- ==============================
 ALTER TABLE public.licenses ENABLE ROW LEVEL SECURITY;
 
--- Tout membre de l'établissement peut consulter la licence de son école
--- (nécessaire pour la validation côté application) ; le super_admin voit tout.
-CREATE POLICY "Users can view their school's licenses"
-ON public.licenses FOR SELECT
-USING (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE school_id = licenses.school_id)
-    OR auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
+-- Modèle de rôle (cf. 20260914130008_rls_policies.sql) :
+--   - Lecture  : tous les membres (validation de licence côté application)
+--   - INSERT/UPDATE/DELETE : super admin uniquement (gestion commerciale)
+-- Note : anciennes politiques basées sur une table `user_roles` inexistante
+-- (le rôle vit dans public.profiles) — corrompues et non appliquées.
+CREATE POLICY "rls_licenses_read_member" ON public.licenses
+FOR SELECT USING (
+    public.is_school_member(school_id) OR public.is_super_admin()
 );
 
--- Seul le super_admin crée, modifie ou supprime les licences (gestion commerciale)
-CREATE POLICY "Super admin can insert licenses"
-ON public.licenses FOR INSERT
-WITH CHECK (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
-);
-
-CREATE POLICY "Super admin can update licenses"
-ON public.licenses FOR UPDATE
-USING (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
-);
-
-CREATE POLICY "Super admin can delete licenses"
-ON public.licenses FOR DELETE
-USING (
-    auth.uid() IN (SELECT user_id FROM user_roles WHERE role = 'super_admin')
-);
+CREATE POLICY "rls_licenses_write_admin" ON public.licenses
+FOR ALL USING (public.is_super_admin())
+WITH CHECK (public.is_super_admin());
