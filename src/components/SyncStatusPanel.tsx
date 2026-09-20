@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SyncService } from '../services/sync.service';
 import { ConflictService } from '../services/conflict.service';
-import { getDb } from '../services/local/db';
+import { getDb, getStorageEngine } from '../services/local/db';
 import { useNetwork } from '../hooks/useNetwork';
 
 interface SyncStats {
@@ -221,6 +221,11 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
                 color={isOnline ? 'var(--text-success)' : 'var(--text-muted)'}
               />
               <StatusRow
+                label="Moteur de données"
+                value={storageEngineLabel(getStorageEngine())}
+                color={storageEngineColor(getStorageEngine())}
+              />
+              <StatusRow
                 label="Dernière sync"
                 value={formatLastSync(stats.lastSyncAt)}
                 color="var(--text-primary)"
@@ -280,6 +285,22 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
       )}
     </div>
   );
+}
+
+function storageEngineLabel(engine: 'sqlite' | 'websql-mock' | 'none'): string {
+  switch (engine) {
+    case 'sqlite': return 'SQLite (Tauri)';
+    case 'websql-mock': return 'LocalStorage (dév.)';
+    case 'none': return 'Indisponible';
+  }
+}
+
+function storageEngineColor(engine: 'sqlite' | 'websql-mock' | 'none'): string {
+  switch (engine) {
+    case 'sqlite': return 'var(--text-success)';
+    case 'websql-mock': return 'var(--text-warning)';
+    case 'none': return 'var(--text-danger)';
+  }
 }
 
 function StatusRow({
