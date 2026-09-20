@@ -150,12 +150,13 @@ BEGIN
     RAISE EXCEPTION 'Seul un super admin peut promouvoir un super admin.';
   END IF;
 
+  -- Durcissement : AUCUNE exception direction. Personne (hors super_admin) ne
+  -- peut changer son propre rôle ni son école, même une direction (sinon une
+  -- direction pourrait se transférer dans une autre école).
   IF NEW.id = auth.uid() AND NOT public.is_super_admin() THEN
-    IF NOT public.is_direction(OLD.school_id) AND NOT public.is_direction(NEW.school_id) THEN
-      IF NEW.role IS DISTINCT FROM OLD.role
-         OR NEW.school_id IS DISTINCT FROM OLD.school_id THEN
-        RAISE EXCEPTION 'Un utilisateur ne peut pas modifier son propre rôle ni son établissement.';
-      END IF;
+    IF NEW.role IS DISTINCT FROM OLD.role
+       OR NEW.school_id IS DISTINCT FROM OLD.school_id THEN
+      RAISE EXCEPTION 'Un utilisateur ne peut pas modifier son propre rôle ni son établissement.';
     END IF;
   END IF;
   RETURN NEW;
@@ -329,6 +330,8 @@ CREATE POLICY "rls_school_settings_write_direction" ON public.school_settings
 DROP POLICY IF EXISTS "rls_school_devices_read_member" ON public.school_devices;
 CREATE POLICY "rls_school_devices_read_member" ON public.school_devices
   FOR SELECT USING (public.is_school_member(school_id) OR public.is_super_admin());
+-- Insertion membre conservée : tout utilisateur (professeur, secrétaire...) doit
+-- pouvoir enregistrer son propre appareil via le DeviceRegistrationModal.
 DROP POLICY IF EXISTS "rls_school_devices_insert_member" ON public.school_devices;
 CREATE POLICY "rls_school_devices_insert_member" ON public.school_devices
   FOR INSERT WITH CHECK (public.is_school_member(school_id) OR public.is_super_admin());
@@ -611,10 +614,16 @@ CREATE POLICY "rls_audit_logs_read_direction" ON public.audit_logs
   FOR SELECT USING (
     public.is_super_admin() OR public.is_direction(school_id)
   );
+-- Insertion ouverte à tout membre MAIS auto-attribuée : l'utilisateur ne peut
+-- insérer qu'un log dont user_id = son propre auth.uid() et school_id = son
+-- école. Empêche de fabriquer de faux logs au nom d'un autre utilisateur ou
+-- d'une autre école, sans casser les flows de log des professeurs/sécrétaires.
 DROP POLICY IF EXISTS "rls_audit_logs_insert_member" ON public.audit_logs;
-CREATE POLICY "rls_audit_logs_insert_member" ON public.audit_logs
+DROP POLICY IF EXISTS "rls_audit_logs_insert_self" ON public.audit_logs;
+CREATE POLICY "rls_audit_logs_insert_self" ON public.audit_logs
   FOR INSERT WITH CHECK (
-    public.is_super_admin() OR public.is_school_member(school_id)
+    public.is_super_admin()
+    OR (user_id = auth.uid() AND school_id = public.get_current_user_school_id())
   );
 
 -- ----------------------------------------------------------------------------
@@ -729,6 +738,8 @@ BEGIN
     DROP POLICY IF EXISTS "rls_devices_read_member" ON public.devices;
     CREATE POLICY "rls_devices_read_member" ON public.devices
       FOR SELECT USING (public.is_school_member(school_id) OR public.is_super_admin());
+    -- Insertion membre conservée : l'enregistrement d'un nouvel appareil part du
+    -- client (DeviceRegistrationModal) pour tous les rôles.
     DROP POLICY IF EXISTS "rls_devices_insert_member" ON public.devices;
     CREATE POLICY "rls_devices_insert_member" ON public.devices
       FOR INSERT WITH CHECK (public.is_school_member(school_id) OR public.is_super_admin());
