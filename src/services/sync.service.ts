@@ -68,20 +68,22 @@ let onlineListener: (() => void) | null = null;
 // Helpers
 // ================================================================
 
-async function getLastSyncAt(schoolId: string): Promise<string | null> {
+async function getLastSyncAt(schoolId: string, table?: string): Promise<string | null> {
   const db = await getDb();
+  const key = table ? `last_sync_at_${schoolId}_${table}` : `last_sync_at_${schoolId}`;
   const rows = await db.select<{ value: string }[]>(
     `SELECT value FROM sync_metadata WHERE key = $1`,
-    [`last_sync_at_${schoolId}`]
+    [key]
   );
   return rows.length ? rows[0].value : null;
 }
 
-async function setLastSyncAt(schoolId: string, timestamp: string) {
+async function setLastSyncAt(schoolId: string, timestamp: string, table?: string) {
   const db = await getDb();
+  const key = table ? `last_sync_at_${schoolId}_${table}` : `last_sync_at_${schoolId}`;
   await db.execute(
     `INSERT OR REPLACE INTO sync_metadata (key, value) VALUES ($1, $2)`,
-    [`last_sync_at_${schoolId}`, timestamp]
+    [key, timestamp]
   );
 }
 
@@ -104,23 +106,34 @@ export class SyncService {
     }
 
     const db = await getDb();
-    const lastSyncAt = await getLastSyncAt(schoolId);
+    // Curseur par table : une table en échec conserve son ancien curseur et sera
+    // entièrement re-récupérée au prochain pull (pas de lignes perdues).
     const syncStartedAt = new Date().toISOString();
+    let pullHadError = false;
 
-    console.log(`[Sync] Pull started. Mode: ${lastSyncAt ? `incremental since ${lastSyncAt}` : 'full'}`);
+    console.log(`[Sync] Pull started. Mode: ${await getLastSyncAt(schoolId) ? `incremental since ${await getLastSyncAt(schoolId)}` : 'full'}`);
 
     for (const table of SYNC_TABLES) {
       try {
+        const tableLastSyncAt = await getLastSyncAt(schoolId, table);
         let query = supabase.from(table).select('*').eq('school_id', schoolId);
 
-        // Sync incrémentale : ne prendre que les lignes nouvelles ou modifiées
-        if (lastSyncAt) {
-          query = query.gt('updated_at', lastSyncAt);
+        // Sync incrémentale : ne prendre que les lignes nouvelles ou modifiées.
+        // `>=` (au lieu de `>`) : les upserts sont idempotents (INSERT OR REPLACE),
+        // donc re-récupérer la ligne exactement au curseur est sûr — évite de
+        // sauter une ligne dont le timestamp serait égal au curseur.
+        if (tableLastSyncAt) {
+          query = query.gte('updated_at', tableLastSyncAt);
         }
 
         const { data, error } = await query;
-        if (error) { console.warn(`[Sync] Pull error on ${table}:`, error.message); continue; }
-        if (!data || data.length === 0) { continue; }
+        if (error) { pullHadError = true; console.warn(`[Sync] Pull error on ${table}:`, error.message); continue; }
+        if (!data || data.length === 0) {
+          // Table en succès mais rien de nouveau : on avance toujours son curseur.
+          await setLastSyncAt(schoolId, syncStartedAt, table);
+          console.log(`[Sync] Pulled 0 rows for ${table}`);
+          continue;
+        }
 
         const pendingMutationsRows = await db.select<any[]>(
           `SELECT * FROM mutations_queue WHERE table_name = $1 AND status IN ('pending', 'processing')`,
@@ -166,14 +179,21 @@ export class SyncService {
           );
         }
 
+        // Table entièrement reçue avec succès : on avance SON curseur seulement ici.
+        await setLastSyncAt(schoolId, syncStartedAt, table);
         console.log(`[Sync] Pulled ${data.length} rows for ${table}`);
       } catch (e) {
+        pullHadError = true;
         console.error(`[Sync] Error pulling ${table}:`, e);
       }
     }
 
-    // Enregistrer le timestamp du début de ce sync (pas la fin, pour éviter de manquer des rows)
-    await setLastSyncAt(schoolId, syncStartedAt);
+    // Référence globale : mise à jour uniquement si TOUTES les tables ont réussi.
+    // Une erreur partielle ne fait donc jamais perdre de lignes : les tables en
+    // échec gardent leur ancien curseur et seront re-récupérées au prochain pull.
+    if (!pullHadError) {
+      await setLastSyncAt(schoolId, syncStartedAt);
+    }
     await DeviceService.updateLastSync();
     console.log('[Sync] Pull complete. last_sync_at set to', syncStartedAt);
   }

@@ -10,6 +10,33 @@ let dbInstance: any = null;
  * permettre de travailler sur l'UI dans le navigateur avec `npm run dev`.
  * Il ne supporte qu'un sous-ensemble très basique du SQL et ne doit JAMAIS
  * être utilisé comme référence pour le fonctionnement réel de l'app.
+ *
+ * ── CONTRAT DE SOUS-ENSEMBLE SUPPORTÉ ──────────────────────────────────────
+ * execute() :
+ *   - CREATE TABLE (IF NOT EXISTS) {table}          → crée un store vide
+ *   - INSERT INTO {table} (cols) VALUES ($1..$n)    → upsert par `id`
+ *   - UPDATE {table} SET ... WHERE school_id = $n / id = $n
+ *      (heuristique : matche school_id si présent, id, is_active littéral ou
+ *      paramétré $n, deleted_at =, name =)
+ *   - DELETE FROM {table} [WHERE status = 'error'|'pending' | id = $1] sinon purge
+ * select() :
+ *   - FROM {une seule table} — AUCUNE jointure (JOIN non supporté)
+ *   - WHERE : deleted_at IS NULL ; school_id (+ academic_year_id/section_id/
+ *     level_id/class_id) ; academic_year_id seul ; class_id ; subject_id ;
+ *     template_id ; id = $1
+ *   - ORDER BY : start_date DESC/ASC, level_order ASC, name ASC
+ * NON SUPPORTÉ : JOIN, GROUP BY, agrégats (COUNT/SUM...), sous-requêtes.
+ *   Les agrégats (ex. SELECT COUNT(*)) renvoient les lignes brutes : les
+ *   appelants doivent tolérer `rows[0]?.count ?? 0`.
+ *
+ * ── INTERDITS ──────────────────────────────────────────────────────────────
+ * - Ne PAS utiliser ce mock pour valider la logique métier critique ou la
+ *   synchronisation (les requêtes réelles SQLite sont exécutées telles quelles
+ *   en dépit des heuristiques ici).
+ * - Ne PAS étendre ce mock pour imiter SQL/RLS : s'il devient insuffisant,
+ *   limiter le dev navigateur aux écrans UI et aux données de démo.
+ * - Toute logique ne dépendant du SQL se valide en Tauri (SQLite) ou sur la
+ *   base Supabase.
  */
 class WebSqlMock {
   private store: Map<string, any[]> = new Map();
@@ -317,8 +344,35 @@ async function initDb(db: any) {
 // TOGGLE SYNCHRONISATION SUPABASE (mettez à true pour réactiver la synchro Supabase à la fin)
 export const ENABLE_REMOTE_SYNC = true;
 
-export async function queueMutation(tableName: string, operation: 'INSERT' | 'UPDATE' | 'DELETE', payload: Record<string, any>) {
-  if (!ENABLE_REMOTE_SYNC) return;
+export type QueueMutationResult =
+  | { ok: true }
+  | { ok: false; errorType: 'blocking' | 'temporary'; message: string };
+
+export interface QueueFailure {
+  at: string;
+  table: string;
+  operation: string;
+  errorType: 'blocking' | 'temporary';
+  message: string;
+}
+
+let lastQueueFailure: QueueFailure | null = null;
+
+/**
+ * Retourne la dernière mutation qui n'a PAS pu être enregistrée dans la file
+ * (affichée à l'utilisateur). null si aucune échec depuis le dernier
+ * clearLastQueueFailure().
+ */
+export function getLastQueueFailure(): QueueFailure | null {
+  return lastQueueFailure;
+}
+
+export function clearLastQueueFailure(): void {
+  lastQueueFailure = null;
+}
+
+export async function queueMutation(tableName: string, operation: 'INSERT' | 'UPDATE' | 'DELETE', payload: Record<string, any>): Promise<QueueMutationResult> {
+  if (!ENABLE_REMOTE_SYNC) return { ok: true };
 
   try {
     const db = await getDb();
@@ -328,7 +382,14 @@ export async function queueMutation(tableName: string, operation: 'INSERT' | 'UP
       `INSERT INTO mutations_queue (id, table_name, operation, payload, created_at, status) VALUES ($1, $2, $3, $4, $5, 'pending')`,
       [id, tableName, operation, JSON.stringify(payload), now]
     );
+    return { ok: true };
   } catch (e) {
-    console.warn('[queueMutation] Error:', e);
+    const message = e instanceof Error ? e.message : String(e);
+    // 'blocking' = base locale inaccessible (SQLite en échec) ; sinon 'temporary'.
+    const errorType: 'blocking' | 'temporary' = getStorageEngine() === 'none' ? 'blocking' : 'temporary';
+    lastQueueFailure = { at: new Date().toISOString(), table: tableName, operation, errorType, message };
+    // Log structuré sans le payload (pas d'exposition de données sensibles).
+    console.error(`[queueMutation] FAILED table=${tableName} operation=${operation} type=${errorType} message=${message}`);
+    return { ok: false, errorType, message };
   }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SyncService } from '../services/sync.service';
 import { ConflictService } from '../services/conflict.service';
-import { getDb, getStorageEngine } from '../services/local/db';
+import { getDb, getStorageEngine, getLastQueueFailure, clearLastQueueFailure } from '../services/local/db';
 import { useNetwork } from '../hooks/useNetwork';
 
 interface SyncStats {
@@ -17,11 +17,13 @@ interface SyncStatusPanelProps {
   onSyncComplete?: () => void;
 }
 
-async function getLastSyncAt(): Promise<string | null> {
+async function getLastSyncAt(schoolId?: string | null): Promise<string | null> {
   try {
     const db = await getDb();
+    const key = schoolId ? `last_sync_at_${schoolId}` : 'last_sync_at';
     const rows = await db.select<{ value: string }[]>(
-      `SELECT value FROM sync_metadata WHERE key = 'last_sync_at'`
+      `SELECT value FROM sync_metadata WHERE key = $1`,
+      [key]
     );
     return rows.length ? rows[0].value : null;
   } catch {
@@ -60,7 +62,7 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
         SyncService.getPendingMutationCount(),
         SyncService.getDeadMutations(),
         ConflictService.getPendingConflictCount(),
-        getLastSyncAt(),
+        getLastSyncAt(schoolId),
       ]);
       setStats(s => ({
         ...s,
@@ -72,7 +74,7 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
     } catch (e) {
       console.error('[SyncStatusPanel] refresh error:', e);
     }
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     refresh();
@@ -131,6 +133,7 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
   };
 
   const status = getStatus();
+  const lastQueueFailure = getLastQueueFailure();
 
   return (
     <div style={{ position: 'relative' }}>
@@ -270,6 +273,27 @@ export function SyncStatusPanel({ schoolId, onSyncComplete }: SyncStatusPanelPro
             {!isOnline && (
               <div style={{ marginTop: '16px', padding: '12px', background: 'var(--surface-2)', borderRadius: 'var(--radius)', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, border: '1px solid var(--border)' }}>
                 <strong>Mode hors ligne.</strong> Vos modifications sont sauvegardées localement et seront synchronisées à la reconnexion.
+              </div>
+            )}
+
+            {/* Mutation non enregistrée (P1-04) */}
+            {lastQueueFailure && (
+              <div style={{ marginTop: '16px', padding: '12px', background: '#fef2f2', borderRadius: '10px', border: '1px solid #fecaca', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#b91c1c' }}>
+                  Une opération n'a pas été enregistrée
+                </span>
+                <p style={{ margin: 0, fontSize: '11px', color: '#7f1d1d', lineHeight: 1.4 }}>
+                  {lastQueueFailure.errorType === 'blocking'
+                    ? "La base locale est inaccessible. L'opération n'a pas été sauvegardée."
+                    : "Une écriture locale a échoué. Vérifiez le stockage de l'appareil puis répétez l'opération."}
+                  {' '}({lastQueueFailure.table}, {lastQueueFailure.operation}, {formatLastSync(lastQueueFailure.at)})
+                </p>
+                <button
+                  onClick={() => clearLastQueueFailure()}
+                  style={{ alignSelf: 'flex-start', padding: '4px 10px', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  J'ai compris
+                </button>
               </div>
             )}
 
