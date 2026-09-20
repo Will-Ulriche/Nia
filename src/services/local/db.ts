@@ -188,17 +188,17 @@ class WebSqlMock {
 
     // Handle school_id = $1 AND academic_year_id = $2
     if (q.includes('school_id = $1') && q.includes('academic_year_id = $2') && bindParams[0] && bindParams[1]) {
-      rows = rows.filter(r => (r.school_id === bindParams[0] || !r.school_id) && r.academic_year_id === bindParams[1]);
+      rows = rows.filter(r => (r.school_id === bindParams[0]) && r.academic_year_id === bindParams[1]);
     } else if (q.includes('school_id = $1') && q.includes('section_id = $2') && bindParams[0] && bindParams[1]) {
-      rows = rows.filter(r => (r.school_id === bindParams[0] || !r.school_id) && r.section_id === bindParams[1]);
+      rows = rows.filter(r => (r.school_id === bindParams[0]) && r.section_id === bindParams[1]);
     } else if (q.includes('school_id = $1') && q.includes('level_id = $2') && bindParams[0] && bindParams[1]) {
-      rows = rows.filter(r => (r.school_id === bindParams[0] || !r.school_id) && r.level_id === bindParams[1]);
+      rows = rows.filter(r => (r.school_id === bindParams[0]) && r.level_id === bindParams[1]);
     } else if (q.includes('academic_year_id = $1') && bindParams[0]) {
       rows = rows.filter(r => r.academic_year_id === bindParams[0]);
     } else if (q.includes('school_id = $1') && q.includes('class_id = $2') && bindParams[0] && bindParams[1]) {
-      rows = rows.filter(r => (r.school_id === bindParams[0] || !r.school_id) && r.class_id === bindParams[1]);
+      rows = rows.filter(r => (r.school_id === bindParams[0]) && r.class_id === bindParams[1]);
     } else if (q.includes('school_id = $1') && bindParams[0]) {
-      rows = rows.filter(r => r.school_id === bindParams[0] || !r.school_id);
+      rows = rows.filter(r => r.school_id === bindParams[0]);
     } else if (q.includes('class_id = $1') && bindParams[0]) {
       rows = rows.filter(r => r.class_id === bindParams[0]);
     } else if (q.includes('subject_id = $1') && bindParams[0]) {
