@@ -55,7 +55,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
       setClasses(cls);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Erreur lors du chargement des donnÃ©es');
+      setError(err.message || 'Erreur lors du chargement des données');
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +77,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
 
   if (!isOpen) return null;
 
-  const currentSection = sections.find(s => s.name === (activeTab === 'COLLEGE' ? 'COLLÃˆGE' : 'LYCÃ‰E'));
+  const currentSection = sections.find(s => s.name === (activeTab === 'COLLEGE' ? 'COLLÈGE' : 'LYCÉE'));
   const currentLevels = levels.filter(l => l.section_id === currentSection?.id);
   const currentClasses = classes.filter(c => c.section_id === currentSection?.id);
 
@@ -95,7 +95,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
       setShowAddSeries(false);
       setNewSeriesName('');
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la crÃ©ation de la sÃ©rie');
+      setError(err.message || 'Erreur lors de la création de la série');
     }
   };
 
@@ -103,7 +103,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
     if (!school || !selectedYear || !newClassLevelId) return;
     
     if (activeTab === 'LYCEE' && !newClassSeriesId) {
-      setError('La sÃ©rie est obligatoire au lycÃ©e.');
+      setError('La série est obligatoire au lycée.');
       return;
     }
 
@@ -119,7 +119,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
       // Check for uniqueness
       const exists = classes.some(c => c.name.toLowerCase() === generatedName.toLowerCase());
       if (exists) {
-        setError(`La classe "${generatedName}" existe dÃ©jÃ  pour cette annÃ©e scolaire.`);
+        setError(`La classe "${generatedName}" existe déjà pour cette année scolaire.`);
         return;
       }
 
@@ -137,12 +137,12 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
       setNewClassSeriesId('');
       setNewClassDivision('');
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la crÃ©ation de la classe');
+      setError(err.message || 'Erreur lors de la création de la classe');
     }
   };
 
   const handleDeleteClass = async (classId: string, className: string) => {
-    if (window.confirm(`ÃŠtes-vous sÃ»r de vouloir supprimer la classe "${className}" ?`)) {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la classe "${className}" ?`)) {
       try {
         await StructureService.deleteClass(classId);
         await loadData();
@@ -159,7 +159,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
       // Check for uniqueness
       const exists = classes.some(c => c.id !== editingClassId && c.name.toLowerCase() === editingClassName.trim().toLowerCase());
       if (exists) {
-        setError(`La classe "${editingClassName}" existe dÃ©jÃ .`);
+        setError(`La classe "${editingClassName}" existe déjà.`);
         return;
       }
 
@@ -191,7 +191,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
               <i className="ti ti-school" style={{ color: '#3b82f6' }} /> Gestionnaire des classes
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-              AnnÃ©e scolaire : <strong style={{ color: '#334155' }}>{selectedYear?.name || 'Aucune'}</strong>
+              Année scolaire : <strong style={{ color: '#334155' }}>{selectedYear?.name || 'Aucune'}</strong>
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '20px', padding: '4px' }}>
@@ -210,7 +210,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
               fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s'
             }}
           >
-            COLLÃˆGE
+            COLLÈGE
           </button>
           <button 
             onClick={() => { setActiveTab('LYCEE'); setShowCreateForm(false); }}
@@ -221,7 +221,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
               fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s'
             }}
           >
-            LYCÃ‰E
+            LYCÉE
           </button>
         </div>
 
@@ -256,7 +256,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
                     }}
                     style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <i className="ti ti-plus" /> CrÃ©er une classe
+                    <i className="ti ti-plus" /> Créer une classe
                   </button>
                 )}
               </div>
@@ -264,7 +264,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
               {/* Create Form */}
               {showCreateForm && (
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#1e293b' }}>Nouvelle classe - {activeTab === 'COLLEGE' ? 'CollÃ¨ge' : 'LycÃ©e'}</h3>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#1e293b' }}>Nouvelle classe - {activeTab === 'COLLEGE' ? 'Collège' : 'Lycée'}</h3>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: activeTab === 'LYCEE' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                     <div>
@@ -274,14 +274,14 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
                         onChange={e => { setNewClassLevelId(e.target.value); setNewClassSeriesId(''); setShowAddSeries(false); }}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                       >
-                        <option value="">-- SÃ©lectionner --</option>
+                        <option value="">-- Sélectionner --</option>
                         {currentLevels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                       </select>
                     </div>
 
                     {activeTab === 'LYCEE' && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>SÃ©rie <span style={{color:'#ef4444'}}>*</span></label>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Série <span style={{color:'#ef4444'}}>*</span></label>
                         {showAddSeries ? (
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <input 
@@ -291,8 +291,8 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
                               onChange={e => setNewSeriesName(e.target.value)}
                               style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                             />
-                            <button onClick={handleCreateSeries} style={{ padding: '0 12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>âœ“</button>
-                            <button onClick={() => setShowAddSeries(false)} style={{ padding: '0 12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>âœ•</button>
+                            <button onClick={handleCreateSeries} style={{ padding: '0 12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>✓</button>
+                            <button onClick={() => setShowAddSeries(false)} style={{ padding: '0 12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>✕</button>
                           </div>
                         ) : (
                           <div style={{ display: 'flex', gap: '8px' }}>
@@ -302,13 +302,13 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
                               disabled={!newClassLevelId}
                               style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', opacity: newClassLevelId ? 1 : 0.6 }}
                             >
-                              <option value="">-- SÃ©lectionner --</option>
+                              <option value="">-- Sélectionner --</option>
                               {seriesList.filter(s => s.level_id === newClassLevelId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                             <button 
                               onClick={() => setShowAddSeries(true)}
                               disabled={!newClassLevelId}
-                              title="Ajouter une nouvelle sÃ©rie"
+                              title="Ajouter une nouvelle série"
                               style={{ width: '40px', background: '#eff6ff', color: '#3b82f6', border: '1px solid #bfdbfe', borderRadius: '8px', cursor: 'pointer', opacity: newClassLevelId ? 1 : 0.6 }}
                             >
                               <i className="ti ti-plus" />
@@ -332,7 +332,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
 
                   {newClassLevelId && (
                     <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', color: '#475569' }}>
-                      Nom gÃ©nÃ©rÃ© : <strong style={{ color: '#0f172a' }}>
+                      Nom généré : <strong style={{ color: '#0f172a' }}>
                         {levels.find(l => l.id === newClassLevelId)?.name}
                         {activeTab === 'LYCEE' && newClassSeriesId ? ` ${seriesList.find(s => s.id === newClassSeriesId)?.name}` : ''}
                         {newClassDivision ? ` ${newClassDivision.trim()}` : ''}
@@ -342,7 +342,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
 
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                     <button onClick={() => setShowCreateForm(false)} style={{ padding: '10px 20px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-                    <button onClick={handleCreateClass} style={{ padding: '10px 24px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>CrÃ©er la classe</button>
+                    <button onClick={handleCreateClass} style={{ padding: '10px 24px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Créer la classe</button>
                   </div>
                 </div>
               )}
@@ -353,7 +353,7 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
                   <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                     <tr>
                       <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>Niveau</th>
-                      {activeTab === 'LYCEE' && <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>SÃ©rie</th>}
+                      {activeTab === 'LYCEE' && <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>Série</th>}
                       <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>Classe</th>
                       <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Effectif</th>
                       <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>Actions</th>
@@ -363,14 +363,14 @@ export function ClassManagerModal({ isOpen, onClose }: ClassManagerModalProps) {
                     {currentClasses.length === 0 ? (
                       <tr>
                         <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                          Aucune classe enregistrÃ©e pour cette section.
+                          Aucune classe enregistrée pour cette section.
                         </td>
                       </tr>
                     ) : (
                       currentClasses.map(c => (
                         <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: 500 }}>{c.level_name}</td>
-                          {activeTab === 'LYCEE' && <td style={{ padding: '12px 16px', fontSize: '14px', color: '#475569' }}>{c.series_name || 'â€”'}</td>}
+                          {activeTab === 'LYCEE' && <td style={{ padding: '12px 16px', fontSize: '14px', color: '#475569' }}>{c.series_name || '—'}</td>}
                           <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: 600 }}>
                             {editingClassId === c.id ? (
                               <input 
