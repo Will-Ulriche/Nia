@@ -511,3 +511,29 @@ CREATE TABLE IF NOT EXISTS license_cache (
     max_devices INTEGER,
     last_checked_at TEXT
 );
+
+-- ==============================
+-- ÉTABLISSEMENTS (SEED LOCAL)
+-- ==============================
+-- Miroir de la table des écoles pour satisfaire les contraintes de clé
+-- étrangère de la base locale (academic_years.school_id, profiles.school_id,
+-- etc.) même en mode hors-ligne / démo.
+CREATE TABLE IF NOT EXISTS schools (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    address TEXT,
+    contact_email TEXT,
+    contact_phone TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by TEXT,
+    device_id TEXT,
+    deleted_at TEXT
+);
+
+-- École de démonstration utilisée par défaut (fallback 'sch_demo_01') quand
+-- aucune école n'est chargée depuis Supabase. INSERT OR IGNORE : idempotent à
+-- chaque initDb. (WebSqlMock ne connaît pas la syntaxe OR IGNORE : il ignore la
+-- requête, sans erreur, car le mode navigateur n'applique pas les FKs.)
+INSERT OR IGNORE INTO schools (id, name) VALUES ('sch_demo_01', 'École de démonstration');
