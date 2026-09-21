@@ -28,14 +28,28 @@ Si vous souhaitez uniquement démarrer l'interface web pour des tests rapides (s
 npm run dev
 ```
 
-## Structure du Projet (Phase 0)
+## Structure du Projet
 - `src/` : Code source React (TypeScript).
-  - `components/` : Composants UI réutilisables.
-  - `pages/` : Vues de l'application.
-  - `services/` : Logique métier (Supabase, Auth).
-  - `db/` : Interactions locales SQLite.
+  - `app/` : Point d'entrée (`App.tsx`).
+  - `components/` : Composants UI réutilisables (dont `LicenseGuard`, modales, formulaires).
+  - `pages/` : Vues par espace (`direction/`, `superadmin/`, dashboards).
+  - `services/` : Logique métier (Supabase, sync) + `services/local/` (SQLite local, schémas).
+  - `context/` : Contextes (`AuthContext`, `SchoolContext`, `AcademicContext`).
+  - `hooks/` : Hooks réutilisables (`useAuth`, `useModules`, `usePermission`, ...).
+  - `layouts/` : Dispositions (`DashboardLayout`).
   - `types/` : Définitions TypeScript.
+  - `db/` : Référentiel de modules (`modules.db.ts`).
+  - `utils/` : Fonctions utilitaires (`version.ts`).
 - `src-tauri/` : Code source Rust pour l'application Desktop et ses plugins (ex: SQLite).
+- `supabase/` : Migrations SQL (schéma + RLS) et `audit/rls_diagnostics.sql` (protocole de diagnostic RLS).
+
+## Test et Qualité
+
+- `npm test` : tests unitaires Vitest (isolation multi-établissements du `WebSqlMock`).
+- `npm run lint` : oxlint.
+- `npm run build` : typecheck + bundle Vite.
+- Scénarios de test manuels : voir [`TEST_SCENARIOS.md`](TEST_SCENARIOS.md).
+- Contrat de cohérence local/cloud : voir [`LOCAL_CLOUD_CONTRACT.md`](LOCAL_CLOUD_CONTRACT.md).
 
 ## Sauvegardes et Restauration (Phase 27)
 
@@ -59,8 +73,9 @@ Préparation de la commercialisation : chaque établissement doit disposer d'une
 utiliser l'application.
 
 - **Gestion côté Super Admin** : menu **Super Admin → 🔑 Licences** (`/admin/licenses`).
-  Création d'une licence (établissement + durée en mois + nombre max d'appareils), prolongation
-  (+12 mois), révocation / réactivation, copie de la clé (`KEM-XXXX-XXXX-XXXX-XXXX`).
+  Création d'une licence (établissement + durée en mois/jours/heures/minutes + nombre max
+  d'appareils), prolongation d'une durée libre, révocation / réactivation, copie de la clé
+  (`KEM-XXXX-XXXX-XXXX-XXXX`).
 - **Activation côté Direction** : à la connexion, si l'application ne détecte pas de licence valide,
   un obturateur bloque l'application jusqu'à saisie de la clé fournie par l'administrateur.
 - **Validation serveur** : la clé est vérifiée dans la table Supabase `licenses` (appartenance à

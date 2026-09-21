@@ -30,9 +30,16 @@ interface LicenseCacheRow {
   last_checked_at: string | null;
 }
 
+export interface LicenseDuration {
+  months: number;
+  days: number;
+  hours: number;
+  minutes: number;
+}
+
 export interface CreateLicensePayload {
   schoolId: string;
-  months: number;
+  duration: LicenseDuration;
   maxDevices: number;
   notes?: string;
 }
@@ -351,12 +358,23 @@ export class LicenseService {
   }
 
   /**
+   * Ajoute une durée (mois, jours, heures, minutes) à une date.
+   */
+  static addDuration(base: Date, duration: LicenseDuration): Date {
+    const dt = new Date(base);
+    dt.setMonth(dt.getMonth() + duration.months);
+    dt.setDate(dt.getDate() + duration.days);
+    dt.setHours(dt.getHours() + duration.hours);
+    dt.setMinutes(dt.getMinutes() + duration.minutes);
+    return dt;
+  }
+
+  /**
    * Crée une licence active pour un établissement.
    */
   static async createLicense(payload: CreateLicensePayload): Promise<License> {
     const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setMonth(expiresAt.getMonth() + payload.months);
+    const expiresAt = this.addDuration(now, payload.duration);
 
     const { data, error } = await supabase
       .from('licenses')
@@ -377,21 +395,21 @@ export class LicenseService {
   }
 
   /**
-   * Prolonge la validité d'une licence de X mois (à partir de sa fin actuelle,
+   * Prolonge la validité d'une licence (à partir de sa fin actuelle,
    * ou de maintenant si elle est déjà expirée).
    */
-  static async extendLicense(id: string, months: number): Promise<License> {
+  static async extendLicense(id: string, duration: LicenseDuration): Promise<License> {
     const { data: current } = await supabase.from('licenses').select('*').eq('id', id).single();
     if (!current) throw new Error('Licence introuvable.');
 
     const base = current.valid_until && new Date(current.valid_until).getTime() > Date.now()
       ? new Date(current.valid_until)
       : new Date();
-    base.setMonth(base.getMonth() + months);
+    const next = this.addDuration(base, duration);
 
     const { data, error } = await supabase
       .from('licenses')
-      .update({ valid_until: base.toISOString(), status: 'active', updated_at: new Date().toISOString() })
+      .update({ valid_until: next.toISOString(), status: 'active', updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();

@@ -16,7 +16,9 @@ export function LicensesList() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ schoolId: '', months: 12, maxDevices: 3, notes: '' });
+  const [form, setForm] = useState({ schoolId: '', months: 12, days: 0, hours: 0, minutes: 0, maxDevices: 3, notes: '' });
+  const [extendId, setExtendId] = useState<string | null>(null);
+  const [extendForm, setExtendForm] = useState({ months: 1, days: 0, hours: 0, minutes: 0 });
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function LicensesList() {
     try {
       const created = await LicenseService.createLicense({
         schoolId: form.schoolId,
-        months: form.months,
+        duration: { months: form.months, days: form.days, hours: form.hours, minutes: form.minutes },
         maxDevices: form.maxDevices,
         notes: form.notes || undefined,
       });
@@ -72,18 +74,48 @@ export function LicensesList() {
   };
 
   const handleAction = async (id: string, action: 'extend' | 'revoke' | 'reactivate') => {
-    const label = action === 'extend' ? 'prolonger de 1 mois' : action === 'revoke' ? 'révoquer' : 'réactiver';
+    if (action === 'extend') {
+      setExtendId(id === extendId ? null : id);
+      setExtendForm({ months: 1, days: 0, hours: 0, minutes: 0 });
+      return;
+    }
+
+    const label = action === 'revoke' ? 'révoquer' : 'réactiver';
     if (!confirm(`Voulez-vous vraiment ${label} cette licence ?`)) return;
 
     setActionId(id);
     try {
-      if (action === 'extend') await LicenseService.extendLicense(id, 1);
       if (action === 'revoke') await LicenseService.revokeLicense(id);
       if (action === 'reactivate') await LicenseService.reactivateLicense(id);
       await loadData();
     } catch (err) {
       console.error(err);
       alert(`Erreur lors de la tentative de ${label}.`);
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleExtend = async (id: string) => {
+    const total =
+      extendForm.months + extendForm.days + extendForm.hours + extendForm.minutes;
+    if (total <= 0) {
+      alert('Veuillez indiquer une durée strictement positive.');
+      return;
+    }
+    setActionId(id);
+    try {
+      await LicenseService.extendLicense(id, {
+        months: extendForm.months,
+        days: extendForm.days,
+        hours: extendForm.hours,
+        minutes: extendForm.minutes,
+      });
+      setExtendId(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la prolongation de la licence.');
     } finally {
       setActionId(null);
     }
@@ -149,21 +181,39 @@ export function LicensesList() {
                 ))}
               </select>
             </div>
-            <div style={{ flex: '1 1 120px' }}>
+            <div style={{ flex: '1 1 80px' }}>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Durée (mois)</label>
               <input
-                type="number" min={1} max={120}
+                type="number" min={0} max={120}
                 value={form.months}
-                onChange={(e) => setForm({ ...form, months: Math.max(1, Number(e.target.value)) })}
+                onChange={(e) => setForm({ ...form, months: Math.max(0, Number(e.target.value)) })}
                 style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-2)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
               />
             </div>
-            <div style={{ flex: '1 1 120px' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Max appareils</label>
+            <div style={{ flex: '1 1 80px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Jours</label>
               <input
-                type="number" min={1} max={100}
-                value={form.maxDevices}
-                onChange={(e) => setForm({ ...form, maxDevices: Math.max(1, Number(e.target.value)) })}
+                type="number" min={0} max={59}
+                value={form.days}
+                onChange={(e) => setForm({ ...form, days: Math.max(0, Number(e.target.value)) })}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-2)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 80px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Heures</label>
+              <input
+                type="number" min={0} max={23}
+                value={form.hours}
+                onChange={(e) => setForm({ ...form, hours: Math.max(0, Number(e.target.value)) })}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-2)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 80px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Minutes</label>
+              <input
+                type="number" min={0} max={59}
+                value={form.minutes}
+                onChange={(e) => setForm({ ...form, minutes: Math.max(0, Number(e.target.value)) })}
                 style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '15px', background: 'var(--surface-2)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
               />
             </div>
@@ -256,26 +306,60 @@ export function LicensesList() {
                           {actionId === lic.id ? '...' : 'Réactiver'}
                         </button>
                       ) : (
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button
-                            onClick={() => handleAction(lic.id, 'extend')}
-                            disabled={actionId === lic.id}
-                            style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', background: 'var(--fill-accent)', color: 'var(--on-accent)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)', transition: 'all 0.2s' }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)'; }}
-                          >
-                            {actionId === lic.id ? '...' : '+ 1 mois'}
-                          </button>
-                          <button
-                            onClick={() => handleAction(lic.id, 'revoke')}
-                            disabled={actionId === lic.id}
-                            style={{ padding: '6px 12px', border: '1px solid var(--border-danger)', borderRadius: '6px', background: 'transparent', color: 'var(--text-danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, transition: 'all 0.2s' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-danger)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          >
-                            {actionId === lic.id ? '...' : 'Révoquer'}
-                          </button>
-                        </div>
+                        <>
+                          {extendId === lic.id && (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: '10px' }}>
+                              {(['months', 'days', 'hours', 'minutes'] as const).map((f) => (
+                                <div key={f}>
+                                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: 'var(--text-muted)' }}>
+                                    {f === 'months' ? 'Mois' : f === 'days' ? 'Jours' : f === 'hours' ? 'Heures' : 'Minutes'}
+                                  </label>
+                                  <input
+                                    type="number" min={0} max={f === 'months' ? 120 : f === 'days' ? 30 : f === 'hours' ? 23 : 59}
+                                    value={extendForm[f]}
+                                    onChange={(e) => setExtendForm({ ...extendForm, [f]: Math.max(0, Number(e.target.value)) })}
+                                    style={{ width: '58px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--surface-2)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+                                  />
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => handleExtend(lic.id)}
+                                disabled={actionId === lic.id}
+                                style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', background: 'var(--fill-accent)', color: 'var(--on-accent)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)', transition: 'all 0.2s' }}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)'; }}
+                              >
+                                {actionId === lic.id ? '...' : 'Prolonger'}
+                              </button>
+                              <button
+                                onClick={() => setExtendId(null)}
+                                style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '6px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => handleAction(lic.id, 'extend')}
+                              disabled={actionId === lic.id}
+                              style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', background: 'var(--fill-accent)', color: 'var(--on-accent)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)', transition: 'all 0.2s' }}
+                              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)'; }}
+                            >
+                              {actionId === lic.id ? '...' : '+ 1 mois'}
+                            </button>
+                            <button
+                              onClick={() => handleAction(lic.id, 'revoke')}
+                              disabled={actionId === lic.id}
+                              style={{ padding: '6px 12px', border: '1px solid var(--border-danger)', borderRadius: '6px', background: 'transparent', color: 'var(--text-danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, transition: 'all 0.2s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-danger)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                              {actionId === lic.id ? '...' : 'Révoquer'}
+                            </button>
+                          </div>
+                        </>
                       )}
                     </td>
                   </tr>
