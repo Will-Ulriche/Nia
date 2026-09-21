@@ -72,6 +72,7 @@ P2-04. Contrats de données locaux/cloud à formaliser et valider. — ✅ docum
 P3-01. Nettoyage des `any`, logs et commentaires temporaires. — ✅ corrigé
 P3-02. Amélioration des messages d'erreur et de l'observabilité. — ✅ corrigé
 P3-03. Amélioration de la documentation technique et des scénarios de test. — ✅ documenté
+P3-04. Textes de l'interface déformés par un double encodage UTF-8 (mojibake). — ✅ corrigé
 
 ---
 
@@ -711,6 +712,54 @@ Créer un tableau de compatibilité entre le schéma local et le schéma Supabas
 
 ---
 
+## P3-04 — Textes déformés par double encodage UTF-8 (mojibake)
+
+### Gravité
+
+MOYENNE (affichage) — texte illisible mais aucune donnée corrompue.
+
+### Preuve observée
+
+Les fichiers de l'interface direction affichaient `Ã©`, `Ã¨`, `Ã `, `â€¦`
+au lieu de `é`, `è`, `à`, `…`, ainsi que des emojis corrompus (`ðŸ‘©â€ðŸŽ“`
+au lieu de `👩‍🎓`).
+
+Fichiers :
+- `src/components/forms/InscriptionForm.tsx`
+- `src/components/modals/ClassManagerModal.tsx`
+- `src/components/modals/SubjectManagerModal.tsx`
+- `src/pages/direction/students/StudentsList.tsx`
+
+### Cause racine
+
+Les fichiers ont été enregistrés avec un double encodage : la séquence
+d'octets UTF-8 d'un accent a été relue comme Windows-1252 puis réécrite en
+UTF-8. Exemple : `é` (octets `C3 A9`) → `Ã©`.
+
+### Correction minimale
+
+Décodage inverse Windows-1252 → UTF-8 sur les 4 fichiers (conversion
+réversible contrôlée, aucun caractère de remplacement en sortie).
+
+### Ce qui ne doit PAS être modifié
+
+- Les autres fichiers (aucun mojibake détecté) ;
+- les données en base (le mojibake était uniquement dans le code UI) ;
+- les icônes binaires régénérées par `tauri dev` (restaurées).
+
+### Test de validation
+
+- `npm run build` : OK ;
+- `npm run lint` : OK (warnings pré-existants uniquement) ;
+- `npm test` : 6/6.
+
+### Résultat obtenu
+
+Texte français correct rétabli (`Données`, `Élèves`, `Année scolaire`,
+`Êtes-vous sûr…`). Commit `fdb0569` sur `audit/fix-mojibake`.
+
+---
+
 # 3. ORDRE D'EXÉCUTION RECOMMANDÉ POUR OPENCODE
 
 ## Étape 1 — Sécurité et accès
@@ -981,6 +1030,7 @@ preuves (commits Git) et les actions restantes.
 | P3-01 | Typage `SqlValue`, retrait des `any` à la frontière SQL locale | `0f369b2` | ✅ |
 | P3-02 | Erreurs d'init SQLite actionnables, observabilité sync | `6cadc1f` | ✅ |
 | P3-03 | Documentation technique + scénarios de test | `b8ac7c9` (`TEST_SCENARIOS.md`, README) | ✅ |
+| P3-04 | Textes déformés par mojibake UTF-8 corrigés dans les 4 fichiers de l'interface direction | `fdb0569` | ✅ |
 
 ## Actions restantes (hors code)
 
@@ -994,3 +1044,9 @@ preuves (commits Git) et les actions restantes.
 ---
 
 FIN DU RAPPORT.
+
+## Annexe — Compte rendu post-clôture 21/09/2026
+
+| Date | Action | Preuve | Statut |
+|---|---|---|---|
+| 21/09 | Correction mojibake UTF-8 des textes UI direction (P3-04) | `fdb0569` (`audit/fix-mojibake`) | ✅ |
