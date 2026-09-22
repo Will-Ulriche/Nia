@@ -24,7 +24,13 @@ export function UsersList() {
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState('');
-  
+
+  // État édition
+  const [editingUser, setEditingUser] = useState<ProfileWithSchool | null>(null);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', role: 'direction' as CreateUserPayload['role'], school_id: '' });
+  const [editError, setEditError] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const [form, setForm] = useState<CreateUserPayload>({
     email: '',
     password: '',
@@ -84,6 +90,36 @@ export function UsersList() {
     } catch (err: any) {
       console.error(err);
       alert("Erreur lors de la désactivation.");
+    }
+  };
+
+  const handleEditOpen = (user: ProfileWithSchool) => {
+    setEditingUser(user);
+    setEditForm({ first_name: user.first_name, last_name: user.last_name, role: user.role as CreateUserPayload['role'], school_id: user.school_id ?? '' });
+    setEditError('');
+  };
+
+  const handleEditSave = async () => {
+    if (!editingUser) return;
+    setEditError('');
+    if (!editForm.first_name.trim() || !editForm.last_name.trim()) {
+      setEditError('Le prénom et le nom sont obligatoires.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await UserService.updateUser(editingUser.id, {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        role: editForm.role,
+        school_id: editForm.school_id || null,
+      });
+      setEditingUser(null);
+      await loadData();
+    } catch (err: any) {
+      setEditError(err.message || 'Erreur lors de la modification.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -286,6 +322,15 @@ export function UsersList() {
                           </button>
                         )}
                         <button
+                          onClick={() => handleEditOpen(user)}
+                          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#3b82f6', transition: 'all 0.2s' }}
+                          title="Modifier"
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#dbeafe'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#eff6ff'; }}
+                        >
+                          <i className="ti ti-pencil" style={{ fontSize: '16px' }} />
+                        </button>
+                        <button
                           onClick={() => handleDeactivate(user)}
                           style={{ background: '#fef2f2', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', color: '#ef4444', transition: 'all 0.2s' }}
                           title="Désactiver"
@@ -303,6 +348,84 @@ export function UsersList() {
           </div>
         )}
       </div>
+
+      {/* Modal d'édition */}
+      {editingUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '28px', width: '480px', maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1e3a5f' }}>Modifier l'utilisateur</h3>
+              <button onClick={() => setEditingUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '20px', lineHeight: 1 }}>
+                <i className="ti ti-x" />
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '13px', color: '#475569' }}>Prénom *</label>
+                <input
+                  type="text"
+                  value={editForm.first_name}
+                  onChange={e => setEditForm({ ...editForm, first_name: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '13px', color: '#475569' }}>Nom *</label>
+                <input
+                  type="text"
+                  value={editForm.last_name}
+                  onChange={e => setEditForm({ ...editForm, last_name: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '13px', color: '#475569' }}>Rôle</label>
+                <select
+                  value={editForm.role}
+                  onChange={e => setEditForm({ ...editForm, role: e.target.value as CreateUserPayload['role'] })}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: 'white' }}
+                >
+                  <option value="direction">Direction</option>
+                  <option value="secretaire">Secrétaire</option>
+                  <option value="professeur">Professeur</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+              {editForm.role !== 'super_admin' && (
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', fontSize: '13px', color: '#475569' }}>Établissement</label>
+                  <select
+                    value={editForm.school_id}
+                    onChange={e => setEditForm({ ...editForm, school_id: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: 'white' }}
+                  >
+                    <option value="">— Aucun —</option>
+                    {schools.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            {editError && <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '12px', fontWeight: 500 }}>{editError}</p>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+              <button
+                onClick={() => setEditingUser(null)}
+                style={{ padding: '10px 20px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', color: '#64748b', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleEditSave}
+                disabled={saving}
+                style={{ padding: '10px 24px', border: 'none', borderRadius: '8px', background: saving ? '#93c5fd' : '#3b82f6', color: 'white', fontWeight: 600, fontSize: '14px', cursor: saving ? 'not-allowed' : 'pointer' }}
+              >
+                {saving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

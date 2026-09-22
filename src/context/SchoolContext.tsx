@@ -53,7 +53,7 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
       setError(null);
 
       try {
-        // 1. Récupérer l'utilisateur connecté
+        // 1. Récupérer l'utilisateur connecté depuis Supabase
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || cancelled) return;
 
@@ -65,27 +65,46 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (!profile?.school_id || cancelled) return;
+        const schoolId = profile.school_id;
 
-        // 3. Récupérer les données de l'établissement
+        // 3a. FALLBACK OFFLINE-FIRST : charger l'école depuis SQLite local
+        //     immédiatement, pour que l'UI ne reste pas bloquée sur "Chargement..."
+        //     si Supabase est lent ou injoignable.
+        try {
+          const { getDb } = await import('../services/local/db');
+          const db = await getDb();
+          const localRows = await db.select<School[]>(
+            `SELECT * FROM schools WHERE id = $1 LIMIT 1`,
+            [schoolId]
+          );
+          if (localRows.length > 0 && !cancelled) {
+            setSchool(localRows[0]);
+            setIsLoading(false); // libère l'UI immédiatement
+          }
+        } catch (localErr) {
+          console.warn('[SchoolContext] Lecture locale impossible:', localErr);
+        }
+
+        // 3b. Source de vérité : charger depuis Supabase et mettre à jour
         const { data: schoolData, error: schoolError } = await supabase
           .from('schools')
           .select('*')
-          .eq('id', profile.school_id)
+          .eq('id', schoolId)
           .maybeSingle();
 
         if (schoolError) throw schoolError;
         if (cancelled) return;
 
-        setSchool(schoolData as School);
-
-        // Miroir local de l'établissement : requis pour les FK SQLite locales
-        // (academic_years.school_id, etc.) — la synchro ne tire pas `schools`.
-        SchoolService.mirrorLocal(schoolData as School).catch(err =>
-          console.warn('[SchoolContext] mirrorLocal failed:', err)
-        );
+        if (schoolData) {
+          setSchool(schoolData as School);
+          // Miroir local : maintient la FK SQLite à jour
+          SchoolService.mirrorLocal(schoolData as School).catch(err =>
+            console.warn('[SchoolContext] mirrorLocal failed:', err)
+          );
+        }
 
         // 4. Récupérer les modules actifs
-        const modules = await ModuleService.getActiveModules(profile.school_id);
+        const modules = await ModuleService.getActiveModules(schoolId);
         if (!cancelled) {
           setActiveModules(modules);
         }
