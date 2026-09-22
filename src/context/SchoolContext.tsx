@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { ModuleService } from '../services/module.service';
+import { SchoolService } from '../services/school.service';
 import type { School, SchoolModule } from '../types/database';
 import type { ModuleName } from '../types/app';
 
@@ -76,6 +77,12 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         setSchool(schoolData as School);
+
+        // Miroir local de l'établissement : requis pour les FK SQLite locales
+        // (academic_years.school_id, etc.) — la synchro ne tire pas `schools`.
+        SchoolService.mirrorLocal(schoolData as School).catch(err =>
+          console.warn('[SchoolContext] mirrorLocal failed:', err)
+        );
 
         // 4. Récupérer les modules actifs
         const modules = await ModuleService.getActiveModules(profile.school_id);

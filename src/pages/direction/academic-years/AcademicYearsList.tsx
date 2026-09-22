@@ -81,7 +81,8 @@ export function AcademicYearsList() {
       setEditingYear(null);
       setFormData(emptyForm);
     } catch (err) {
-      setError('Erreur lors de l\'enregistrement de l\'année scolaire.');
+      const detail = err instanceof Error ? err.message : String(err);
+      setError(`Erreur lors de l'enregistrement de l'année scolaire : ${detail}`);
     } finally {
       setIsSaving(false);
     }

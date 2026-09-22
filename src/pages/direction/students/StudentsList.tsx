@@ -4,6 +4,7 @@ import { useSchool } from '../../../hooks/useModules';
 import { useAcademic } from '../../../context/AcademicContext';
 import { StudentService } from '../../../services/student.service';
 import { StructureService } from '../../../services/structure.service';
+import { SeedService } from '../../../services/seed.service';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import type { Student, Class, Level } from '../../../types/database';
 
@@ -27,6 +28,25 @@ export function StudentsList() {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentWithEnrollment | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
+  
+  const handleSeedDemo = async () => {
+    if (!school || !selectedYear) return;
+    if (!window.confirm(`Créer 15 élèves par classe pour l'année « ${selectedYear.name} » ? Les élèves des classes déjà complètes ne seront pas recréés.`)) return;
+    try {
+      setIsSeeding(true);
+      setSeedMessage(null);
+      const result = await SeedService.seedStudentsPerClass(school.id, selectedYear.id, 15);
+      setSeedMessage(`${result.createdStudents} élève${result.createdStudents > 1 ? 's' : ''} créé${result.createdStudents > 1 ? 's' : ''} et inscrit${result.createdStudents > 1 ? 's' : ''} dans ${result.classes} classe${result.classes > 1 ? 's' : ''}.`);
+      await loadData();
+    } catch (err: any) {
+      setSeedMessage(null);
+      alert(err?.message || 'Erreur lors de la génération des élèves.');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
   
   
 
@@ -132,13 +152,29 @@ export function StudentsList() {
             {filteredStudents.length} élève{filteredStudents.length > 1 ? 's' : ''}{hasActiveFilters ? ` sur ${students.length}` : ` enregistré${students.length > 1 ? 's' : ''}`}
           </p>
         </div>
-        <button
-          onClick={() => openForm()}
-          style={{ padding: '0.6rem 1.2rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <i className="ti ti-plus" /> Nouvel élève
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={handleSeedDemo}
+            disabled={isSeeding || !selectedYear}
+            title={selectedYear ? 'Générer 15 élèves de démonstration par classe' : 'Sélectionnez une année scolaire d\'abord'}
+            style={{ padding: '0.6rem 1.2rem', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: isSeeding || !selectedYear ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', opacity: isSeeding || !selectedYear ? 0.6 : 1 }}
+          >
+            <i className="ti ti-wand" /> {isSeeding ? 'Génération…' : '15 élèves/classe'}
+          </button>
+          <button
+            onClick={() => openForm()}
+            style={{ padding: '0.6rem 1.2rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <i className="ti ti-plus" /> Nouvel élève
+          </button>
+        </div>
       </div>
+
+      {seedMessage && (
+        <div style={{ marginBottom: '1rem', padding: '10px 14px', background: '#dcfce7', color: '#166534', borderRadius: '8px', fontSize: '14px', fontWeight: 500 }}>
+          <i className="ti ti-check" /> {seedMessage}
+        </div>
+      )}
 
       {/* Search & Filter Bar */}
       <div style={{
