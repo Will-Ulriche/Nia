@@ -18,12 +18,10 @@ export class AcademicService {
 
   static async listAcademicYears(schoolId: string): Promise<AcademicYear[]> {
     const db = await getDb();
-    // SQLite doesn't have true booleans, they are stored as integers (1/0)
     const data = await db.select<AcademicYear[]>(
       `SELECT * FROM academic_years WHERE school_id = $1 AND deleted_at IS NULL ORDER BY start_date DESC`,
       [schoolId]
     );
-    // Map integer to boolean
     return data.map(d => ({ ...d, is_active: Boolean(d.is_active) }));
   }
 
@@ -97,7 +95,6 @@ export class AcademicService {
     const db = await getDb();
     const now = new Date().toISOString();
     
-    // SQLite doesn't support dynamic updates easily without building string
     let query = 'UPDATE academic_years SET updated_at = $1';
     const values: SqlValue[] = [now];
     let idx = 2;
@@ -119,12 +116,24 @@ export class AcademicService {
   static async activateAcademicYear(schoolId: string, yearId: string): Promise<void> {
     const db = await getDb();
     const now = new Date().toISOString();
-    
+
+    // Les années qui étaient actives et vont être désactivées : il faut
+    // aussi mettre leur passage à is_active=0 en file de synchronisation,
+    // sinon Supabase garde l'ancienne valeur pour toujours. À chaque pull
+    // suivant, ce désaccord (local=0, distant=1) est détecté comme un
+    // "conflit" — d'où les entrées répétées vues dans Conflits de
+    // synchronisation, même quand rien de nouveau ne se passe.
+    const previouslyActive = await db.select<{ id: string }[]>(
+      `SELECT id FROM academic_years WHERE school_id = $1 AND is_active = 1 AND id != $2`,
+      [schoolId, yearId]
+    );
+
     // 1. Désactiver localement
     await db.execute(`UPDATE academic_years SET is_active = 0, updated_at = $1 WHERE school_id = $2`, [now, schoolId]);
-    // Nous mettons en file d'attente l'update (ceci peut être compliqué à synchroniser sans envoyer tous les IDs, on simplifie pour le PoC)
-    // Dans un vrai système, on pourrait envoyer une action RPC plutôt qu'une update table directe.
-    
+    for (const y of previouslyActive) {
+      await this.queueMutation('academic_years', 'UPDATE', { id: y.id, is_active: false });
+    }
+
     // 2. Activer la bonne
     await db.execute(`UPDATE academic_years SET is_active = 1, updated_at = $1 WHERE id = $2`, [now, yearId]);
     await this.queueMutation('academic_years', 'UPDATE', { id: yearId, is_active: true });
@@ -225,7 +234,6 @@ export class AcademicService {
         is_active: y.active
       });
 
-      // Seed Trimesters
       const startYear = parseInt(y.start.split('-')[0]);
       const nextYear = startYear + 1;
       

@@ -35,7 +35,7 @@ const TABLE_COLUMNS: Record<string, string[]> = {
   levels: ['id','school_id','section_id','name','level_order','version','created_at','updated_at','updated_by','device_id','deleted_at'],
   series: ['id','school_id','level_id','name','version','created_at','updated_at','updated_by','device_id','deleted_at'],
   classes: ['id','school_id','level_id','academic_year_id','series_id','name','version','created_at','updated_at','updated_by','device_id','deleted_at'],
-  students: ['id','school_id','matricule','first_name','last_name','gender','birth_date','birth_place','address','contact_phone','contact_email','parent_name','parent_contact','version','created_at','updated_at','updated_by','device_id','deleted_at'],
+  students: ['id','school_id','matricule','first_name','last_name','gender','birth_date','birth_place','address','city','neighborhood','nationality','contact_phone','contact_email','parent_name','parent_contact','parent_city','parent_neighborhood','parent_whatsapp','parent_profession','parent_relation','financial_sponsor','schooling_regime','previous_school','previous_class','previous_year','version','created_at','updated_at','updated_by','device_id','deleted_at'],
   teachers: ['id','school_id','profile_id','first_name','last_name','contact_phone','contact_email','version','created_at','updated_at','updated_by','device_id','deleted_at'],
   enrollments: ['id','school_id','student_id','class_id','academic_year_id','status','enrollment_date','version','created_at','updated_at','updated_by','device_id','deleted_at'],
   subjects: ['id','school_id','name','code','description','version','created_at','updated_at','updated_by','device_id','deleted_at'],
@@ -56,6 +56,7 @@ const BOOLEAN_COLUMNS: Record<string, string[]> = {
   academic_years: ['is_active'],
   grades: ['is_absent'],
   fee_definitions: ['is_mandatory'],
+  students: ['financial_sponsor'],
 };
 
 // Max retry attempts before giving up on a mutation
@@ -106,8 +107,6 @@ export class SyncService {
     }
 
     const db = await getDb();
-    // Curseur par table : une table en échec conserve son ancien curseur et sera
-    // entièrement re-récupérée au prochain pull (pas de lignes perdues).
     const syncStartedAt = new Date().toISOString();
     let pullHadError = false;
     const failedTables: string[] = [];
@@ -119,10 +118,6 @@ export class SyncService {
         const tableLastSyncAt = await getLastSyncAt(schoolId, table);
         let query = supabase.from(table).select('*').eq('school_id', schoolId);
 
-        // Sync incrémentale : ne prendre que les lignes nouvelles ou modifiées.
-        // `>=` (au lieu de `>`) : les upserts sont idempotents (INSERT OR REPLACE),
-        // donc re-récupérer la ligne exactement au curseur est sûr — évite de
-        // sauter une ligne dont le timestamp serait égal au curseur.
         if (tableLastSyncAt) {
           query = query.gte('updated_at', tableLastSyncAt);
         }
@@ -130,7 +125,6 @@ export class SyncService {
         const { data, error } = await query;
         if (error) { pullHadError = true; failedTables.push(table); console.warn(`[Sync] Pull error on ${table}:`, error.message); continue; }
         if (!data || data.length === 0) {
-          // Table en succès mais rien de nouveau : on avance toujours son curseur.
           await setLastSyncAt(schoolId, syncStartedAt, table);
           console.log(`[Sync] Pulled 0 rows for ${table}`);
           continue;
@@ -167,7 +161,6 @@ export class SyncService {
             }
           }
 
-          // Pas de conflit ou pas de mutation bloquante : on applique la donnée distante (Idempotent)
           const values = columns.map(col => {
             const v = row[col];
             if (boolCols.includes(col)) return v ? 1 : 0;
@@ -180,7 +173,6 @@ export class SyncService {
           );
         }
 
-        // Table entièrement reçue avec succès : on avance SON curseur seulement ici.
         await setLastSyncAt(schoolId, syncStartedAt, table);
         console.log(`[Sync] Pulled ${data.length} rows for ${table}`);
       } catch (e) {
@@ -190,9 +182,6 @@ export class SyncService {
       }
     }
 
-    // Référence globale : mise à jour uniquement si TOUTES les tables ont réussi.
-    // Une erreur partielle ne fait donc jamais perdre de lignes : les tables en
-    // échec gardent leur ancien curseur et seront re-récupérées au prochain pull.
     if (!pullHadError) {
       await setLastSyncAt(schoolId, syncStartedAt);
     }
@@ -221,7 +210,6 @@ export class SyncService {
 
     const db = await getDb();
 
-    // Include 'error' mutations that haven't exceeded retry limit
     const mutations = await db.select<any[]>(
       `SELECT * FROM mutations_queue 
        WHERE (status = 'pending' OR (status = 'error' AND retry_count < $1))
@@ -242,15 +230,12 @@ export class SyncService {
         const payload = JSON.parse(mutation.payload);
 
         if (mutation.operation === 'INSERT') {
-          // Upsert for idempotence: if the row was already pushed by a previous retry,
-          // this won't create a duplicate.
           const { error } = await supabase.from(mutation.table_name).upsert([payload], { onConflict: 'id' });
           if (error) throw error;
 
         } else if (mutation.operation === 'UPDATE') {
           const { id, ...updateFields } = payload;
 
-          // Récupération de la version distante pour détection de conflit
           const { data: remote } = await supabase
             .from(mutation.table_name)
             .select('*')
@@ -260,32 +245,28 @@ export class SyncService {
           if (remote) {
             const { hasConflict, resolution, winner } = await ConflictService.detectAndResolve(
               mutation.table_name,
-              payload,       // version locale
-              remote         // version distante
+              payload,
+              remote
             );
 
             if (hasConflict && resolution === 'pending_manual') {
-              // Conflit critique : on ne pousse pas, on attend résolution manuelle
               await db.execute(
                 `UPDATE mutations_queue SET status = 'error', retry_count = $1 WHERE id = $2`,
-                [MAX_RETRIES, mutation.id] // bloquer les retries automatiques
+                [MAX_RETRIES, mutation.id]
               );
               continue;
             }
 
             if (hasConflict && resolution === 'auto_lww' && winner && winner.id !== payload.id) {
-              // Remote a gagné : on supprime la mutation locale, SQLite a été mis à jour par ConflictService
               await db.execute(`DELETE FROM mutations_queue WHERE id = $1`, [mutation.id]);
               continue;
             }
           }
 
-          // Pas de conflit ou local gagne : on pousse
           const { error } = await supabase.from(mutation.table_name).update(updateFields).eq('id', id);
           if (error) throw error;
 
         } else if (mutation.operation === 'DELETE') {
-          // Soft delete
           const nowIso = new Date().toISOString();
           const { error } = await supabase
             .from(mutation.table_name)
@@ -294,7 +275,6 @@ export class SyncService {
           if (error) throw error;
         }
 
-        // Success: remove from queue
         await db.execute(`DELETE FROM mutations_queue WHERE id = $1`, [mutation.id]);
 
       } catch (err: any) {
@@ -306,7 +286,6 @@ export class SyncService {
       }
     }
 
-    // Log mutations that have exhausted all retries
     const deadMutations = await db.select<{ id: string; table_name: string }[]>(
       `SELECT id, table_name FROM mutations_queue WHERE status = 'error' AND retry_count >= $1`,
       [MAX_RETRIES]
@@ -326,9 +305,6 @@ export class SyncService {
     await SyncService.pullData(schoolId);
   }
 
-  /**
-   * Retourne le nombre de mutations en attente (pour affichage dans l'UI).
-   */
   static async getPendingMutationCount(): Promise<number> {
     if (!ENABLE_REMOTE_SYNC) return 0;
     const db = await getDb();
@@ -338,9 +314,6 @@ export class SyncService {
     return rows[0]?.count ?? 0;
   }
 
-  /**
-   * Retourne les mutations en erreur définitive (pour alerte UI).
-   */
   static async getDeadMutations(): Promise<any[]> {
     if (!ENABLE_REMOTE_SYNC) return [];
     const db = await getDb();
@@ -350,9 +323,6 @@ export class SyncService {
     );
   }
 
-  /**
-   * Efface les mutations bloquées en erreur pour réinitialiser les compteurs d'erreur UI.
-   */
   static async clearDeadMutations(): Promise<void> {
     const db = await getDb();
     await db.execute(
@@ -376,14 +346,11 @@ export class SyncService {
       }
     };
 
-    // Immediate pull on start
     doPull();
 
-    // Pull on network restore
     onlineListener = doPull;
     window.addEventListener('online', onlineListener);
 
-    // Periodic pull every 5 minutes
     pullInterval = setInterval(doPull, 5 * 60 * 1000);
 
     console.log('[Sync] Auto-sync started (initial pull + every 5 min)');
